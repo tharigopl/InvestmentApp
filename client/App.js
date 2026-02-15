@@ -452,24 +452,24 @@ function Root() {
   return <Navigation />;
 }
 
-export default function App() {
-  return <RootNavigator />;
-}
-
-// export default function App1() {
-  
-//   return (
-//     <>
-//       <StatusBar style="light" />
-//       <AuthContextProvider>
-//         <UsersContextProvider>
-//           <StripeContextProvider>
-//             <FriendsContextProvider>
-//               <Root />
-//               </FriendsContextProvider>
-//           </StripeContextProvider>
-//         </UsersContextProvider>
-//       </AuthContextProvider>
-//     </>
-//   );
+// export default function App() {
+//   return <RootNavigator />;
 // }
+
+export default function App() {
+  
+  return (
+    <>
+      <StatusBar style="light" />
+      <AuthContextProvider>
+        <UsersContextProvider>
+          <StripeContextProvider>
+            <FriendsContextProvider>
+              <Root />
+              </FriendsContextProvider>
+          </StripeContextProvider>
+        </UsersContextProvider>
+      </AuthContextProvider>
+    </>
+  );
+}

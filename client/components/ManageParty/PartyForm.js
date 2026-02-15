@@ -12,7 +12,7 @@ function PartyForm({ submitButtonLabel, onCancel, onSubmit, defaultValues }) {
 
   const [inputs, setInputs] = useState({
     location: {
-      value: defaultValues ? defaultValues.amount.toString() : '',
+      value: defaultValues ? defaultValues.location.toString() : '',
       isValid: true,
     },
     date: {
