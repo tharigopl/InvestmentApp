@@ -6,34 +6,13 @@ require("dotenv").config();
 const API_KEY = "AIzaSyDgLmMpKCzveJf1_yuA0fUzzhy0WRChvZA";
 //const config = require('../config');
 
-const stripe = require("stripe")(process.env.STRIPE_SK, {
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY, {
   apiVersion: process.env.STRIPE_API_VERSION || "2022-08-01",
 });
 
 async function createStripeCustomAccount(body) {  
 
   const data = body;
-  // "business_profile.mcc",
-  // "business_profile.url",
-  // "business_type",
-  // "external_account",
-  // "individual.address.city",
-  // "individual.address.line1",
-  // "individual.address.postal_code",
-  // "individual.address.state",
-  // "individual.dob.day",
-  // "individual.dob.month",
-  // "individual.dob.year",
-  // "individual.email",
-  // "individual.first_name",
-  // "individual.id_number",
-  // "individual.last_name",
-  // "individual.phone",
-  // "individual.ssn_last_4",
-  // "individual.verification.document",
-  // "tos_acceptance.date",
-  // "tos_acceptance.ip"
-
 
   function now(){
     return Math.round((new Date()).getTime() / 1000 );
