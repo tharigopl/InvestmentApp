@@ -43,13 +43,13 @@ const getFriendsByUserId = async (req, res, next) => {
     );
     return next(error);
   }
-
+  console.log("usser id 1", userWithFriends);
   // if (!friends || friends.length === 0) {
-  if (!userWithFriends || userWithFriends.friends.length === 0) {
-    return next(
-      new HttpError('Could not find friends for the provided user id.', 404)
-    );
-  }
+  // if (!userWithFriends || userWithFriends.friends.length === 0) {
+  //   return next(
+  //     new HttpError('Could not find friends for the provided user id.', 404)
+  //   );
+  // }
 
   res.json({
     friends: userWithFriends.friends.map(friend =>

@@ -10,7 +10,7 @@ const User = require('../models/user');
 
 const getAllFriendsForUser = async (req, res, next) => {
     const uid = req.params.id;
-    //console.log("Get All Friends For User", req.params);
+    console.log("Get All Friends For User", req.params);
     let friend;
     let user;
     let tempfriends;
@@ -41,6 +41,7 @@ const getAllFriendsForUser = async (req, res, next) => {
   };
 
 const getFriendById = async (req, res, next) => {
+  console.log("Get All Friends getFriendById", req.params);
   const friendId = req.params.friendid;
 
   let friend;
@@ -67,7 +68,7 @@ const getFriendById = async (req, res, next) => {
 
 const getFriendsByUserId = async (req, res, next) => {
   const userId = req.params.uid;
-
+  console.log("Get All Friends getFriendsByUserId", req.params);
   // let friends;
   let userWithFriends;
   try {
@@ -95,6 +96,7 @@ const getFriendsByUserId = async (req, res, next) => {
 };
 
 const createFriend = async (req, res, next) => {
+  console.log("friedns controllers createFriend", req.params);
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return next(
@@ -159,6 +161,7 @@ const createFriend = async (req, res, next) => {
 };
 
 const updateFriend = async (req, res, next) => {
+  console.log("friedns controllers updateFriend", req.params);
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return next(
