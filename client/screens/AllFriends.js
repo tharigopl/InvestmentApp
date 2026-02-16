@@ -21,7 +21,7 @@ function AllFriends() {
     async function getUsersForFriendsList() {
       setIsFetching(true);
       try {
-        console.log("All friends 1", token, authCtx.token);
+        console.log("All friends 1", token, authCtx.uid);
         const friends = await getAllFriendsForUser(token, authCtx.uid);
         console.log("All friends in Use Effect after getAllUsersForFriends",friends);
         console.log("test", friendsCtx.setFriends(friends));

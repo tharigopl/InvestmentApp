@@ -5,7 +5,7 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // Create contribution payment
 exports.createContribution = async (req, res) => {
-  const { eventId, amount, message } = req.body;
+  const { eventId, amount, message, isAnonymous } = req.body;
   const userId = req.userData.userId;
   
   try {
@@ -55,7 +55,8 @@ exports.createContribution = async (req, res) => {
       amount,
       paymentIntentId: paymentIntent.id,
       message,
-      status: 'pending'
+      status: 'pending',
+      isAnonymous
     });
     
     await contribution.save();
@@ -126,13 +127,15 @@ exports.confirmContribution = async (req, res) => {
         amount: contribution.amount,
         contributedAt: new Date(),
         stripePaymentId: paymentIntentId,
-        message: contribution.message
+        message: contribution.message,
+		isAnonymous: contribution.isAnonymous
       });
       
       // Check if fully funded
       if (event.currentAmount >= event.targetAmount && event.status === 'active') {
         event.status = 'funded';
-        // TODO: Trigger stock purchase
+        // Trigger stock purchase workflow
+        await initiateStockPurchase(event._id);
       }
       
       await event.save();

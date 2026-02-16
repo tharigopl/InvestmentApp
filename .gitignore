@@ -22,5 +22,6 @@ npm-debug.*
 backend/package-lock.json
 backend/node_modules/
 backend/logs/
+.vscode/
 
 

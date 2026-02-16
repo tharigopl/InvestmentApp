@@ -233,8 +233,8 @@ const userSchema = new Schema({
 });
 
 // Indexes for performance
-userSchema.index({ email: 1 });
-userSchema.index({ referralCode: 1 });
+//userSchema.index({ email: 1 });
+//userSchema.index({ referralCode: 1 });
 userSchema.index({ 'investmentProfile.preferredStocks': 1 });
 userSchema.index({ friends: 1 });
 userSchema.index({ accountStatus: 1 });
@@ -254,7 +254,7 @@ userSchema.virtual('initials').get(function() {
 });
 
 
-/ Method to check if user can contribute
+// Method to check if user can contribute
 userSchema.methods.canContribute = function() {
   return this.accountStatus.isActive && 
          this.accountStatus.isVerified && 

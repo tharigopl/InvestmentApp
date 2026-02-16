@@ -76,9 +76,9 @@ const stripeCustomerSchema = new Schema({
 }, { timestamps: true });
 
 // Indexes
-stripeCustomerSchema.index({ user: 1 });
-stripeCustomerSchema.index({ stripeCustomerId: 1 });
-stripeCustomerSchema.index({ email: 1 });
+// stripeCustomerSchema.index({ user: 1 });
+// stripeCustomerSchema.index({ stripeCustomerId: 1 });
+// stripeCustomerSchema.index({ email: 1 });
 
 const StripeCustomer = mongoose.model('StripeCustomer', stripeCustomerSchema);
 
@@ -222,9 +222,9 @@ const stripeConnectedAccountSchema = new Schema({
 }, { timestamps: true });
 
 // Indexes
-stripeConnectedAccountSchema.index({ user: 1 });
-stripeConnectedAccountSchema.index({ stripeAccountId: 1 });
-stripeConnectedAccountSchema.index({ onboardingStatus: 1 });
+// stripeConnectedAccountSchema.index({ user: 1 });
+// stripeConnectedAccountSchema.index({ stripeAccountId: 1 });
+// stripeConnectedAccountSchema.index({ onboardingStatus: 1 });
 
 const StripeConnectedAccount = mongoose.model('StripeConnectedAccount', stripeConnectedAccountSchema);
 
@@ -359,11 +359,11 @@ const stripePaymentIntentSchema = new Schema({
 }, { timestamps: true });
 
 // Indexes
-stripePaymentIntentSchema.index({ paymentIntentId: 1 });
-stripePaymentIntentSchema.index({ contributor: 1, createdAt: -1 });
-stripePaymentIntentSchema.index({ event: 1 });
-stripePaymentIntentSchema.index({ status: 1 });
-stripePaymentIntentSchema.index({ contribution: 1 });
+// stripePaymentIntentSchema.index({ paymentIntentId: 1 });
+// stripePaymentIntentSchema.index({ contributor: 1, createdAt: -1 });
+// stripePaymentIntentSchema.index({ event: 1 });
+// stripePaymentIntentSchema.index({ status: 1 });
+// stripePaymentIntentSchema.index({ contribution: 1 });
 
 const StripePaymentIntent = mongoose.model('StripePaymentIntent', stripePaymentIntentSchema);
 
@@ -432,10 +432,10 @@ const stripePayoutSchema = new Schema({
 }, { timestamps: true });
 
 // Indexes
-stripePayoutSchema.index({ payoutId: 1 });
-stripePayoutSchema.index({ user: 1, createdAt: -1 });
-stripePayoutSchema.index({ stripeAccountId: 1 });
-stripePayoutSchema.index({ status: 1 });
+// stripePayoutSchema.index({ payoutId: 1 });
+   stripePayoutSchema.index({ user: 1, createdAt: -1 });
+// stripePayoutSchema.index({ stripeAccountId: 1 });
+// stripePayoutSchema.index({ status: 1 });
 
 const StripePayout = mongoose.model('StripePayout', stripePayoutSchema);
 
@@ -490,10 +490,10 @@ const stripeWebhookEventSchema = new Schema({
 }, { timestamps: true });
 
 // Indexes
-stripeWebhookEventSchema.index({ eventId: 1 });
-stripeWebhookEventSchema.index({ type: 1 });
-stripeWebhookEventSchema.index({ processed: 1 });
-stripeWebhookEventSchema.index({ createdAt: -1 });
+// stripeWebhookEventSchema.index({ eventId: 1 });
+// stripeWebhookEventSchema.index({ type: 1 });
+   stripeWebhookEventSchema.index({ processed: 1 });
+   stripeWebhookEventSchema.index({ createdAt: -1 });
 
 const StripeWebhookEvent = mongoose.model('StripeWebhookEvent', stripeWebhookEventSchema);
 

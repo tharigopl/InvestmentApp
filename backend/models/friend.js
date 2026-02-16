@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 require("dotenv").config();
 
-const stripe = require("stripe")(process.env.STRIPE_SK, {
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY, {
   apiVersion: process.env.STRIPE_API_VERSION || "2022-08-01",
 });
 

@@ -1,111 +1,154 @@
-import axios from "axios";
+// client/util/stripe.js - Refactored to use apiClient
+import apiClient from './api-client';
 
-//const API_DOMAIN = 'https://happykid-396701.uc.r.appspot.com';
-
-//const API_DOMAIN = process.env.EXPO_PUBLIC_API_DOMAIN;
-//const API_DOMAIN = "http://192.168.0.165:5000";
-const API_DOMAIN = '192.168.0.157:5000';
-//const BACKEND_URL = 'https://uwunm-fe912-default-rtdb.firebaseio.com';
-
-const BACKEND_URL = `${API_DOMAIN}/api/stripe/link`;
-
-const BACKEND_URL_STRIPE = `${API_DOMAIN}/api/stripe/`;
-
-const baseurl = `http://${API_DOMAIN}`;
-const api = axios.create({
-  baseURL: baseurl,
-});
-
-export async function linkStripe(token, location) {
-  console.log("location", location);
-  const header = `Authorization: Bearer ${token}`;
-  //const headers = { Authorization: `Bearer ${token}` };
-  const config = {
-    headers: { Authorization: `Bearer ${token}` },
-    params: { country: location },
-  };
-
-  const response = await api.get('/api/stripe/link', config).catch(function (error) {
-    if (error.response) {
-      // Request made and server responded
-      console.log(error.response.data);
-      console.log(error.response.status);
-      console.log(error.response.headers);
-    } else if (error.request) {
-      // The request was made but no response was received
-      console.log(error.request);
-    } else {
-      // Something happened in setting up the request that triggered an Error
-      console.log("Error", error.message);
-    }
-  });
-  console.log("#$#$#$adsasd linkStripe", response.data);
-  //const id = response.data.name;
-  return response.data;
+/**
+ * Link Stripe account for user
+ * @param {string} location - User's country/location
+ * @returns {Promise<Object>} Stripe account link data
+ */
+export async function linkStripe(location) {
+  try {
+    console.log("Linking Stripe, location:", location);
+    
+    const response = await apiClient.get('/stripe/link', {
+      params: { country: location },
+    });
+    
+    console.log("Link Stripe response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Link Stripe error:', error.message);
+    throw error;
+  }
 }
 
-export async function getStripeAccount(token, stripeaccountid) {
-  console.log("Stripe js get stripe account getStripeAccount", stripeaccountid);
-
-  //const headers = { Authorization: `Bearer ${token}` };
-  // const config = {
-  //    // headers: { Authorization: `Bearer ${token}` },
-  //     params: {stripeaccountid:stripeaccountid}
-  // };
-
-  //const reqParam = {'stripeaccountid':stripeaccountid};
-
-  console.log("config");
-  const response = await api
-    .get("/api/stripe/account/" + stripeaccountid)
-    .catch(function (error) {
-      if (error.response) {
-        // Request made and server responded
-        console.log(error.response.data);
-        console.log(error.response.status);
-        console.log(error.response.headers);
-      } else if (error.request) {
-        // The request was made but no response was received
-        console.log(error.request);
-      } else {
-        // Something happened in setting up the request that triggered an Error
-        console.log("Error", error.message);
-      }
-    });
-  console.log("#$#$#$adsasd getStripeAccount", response.data);
-  //const id = response.data.name;
-  return response.data;
+/**
+ * Get Stripe account details
+ * @param {string} stripeaccountid - Stripe account ID
+ * @returns {Promise<Object>} Account details
+ */
+export async function getStripeAccount(stripeaccountid) {
+  try {
+    console.log("Getting Stripe account:", stripeaccountid);
+    
+    const response = await apiClient.get(`/stripe/account/${stripeaccountid}`);
+    
+    console.log("Get Stripe account response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Get Stripe account error:', error.message);
+    throw error;
+  }
 }
 
-export async function createStripeDashboard(token, stripeaccountid) {
-  console.log("Stripe js get stripe account createStripeDashboard", stripeaccountid);
+/**
+ * Create Stripe dashboard link
+ * @param {string} stripeaccountid - Stripe account ID
+ * @returns {Promise<Object>} Dashboard link data
+ */
+export async function createStripeDashboard(stripeaccountid) {
+  try {
+    console.log("Creating Stripe dashboard link:", stripeaccountid);
+    
+    const response = await apiClient.get(`/stripe/account/account/${stripeaccountid}`);
+    
+    console.log("Create dashboard response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Create Stripe dashboard error:', error.message);
+    throw error;
+  }
+}
 
-  //const headers = { Authorization: `Bearer ${token}` };
-  // const config = {
-  //    // headers: { Authorization: `Bearer ${token}` },
-  //     params: {stripeaccountid:stripeaccountid}
-  // };
+/**
+ * Create connected account for payouts
+ * @param {Object} accountData - Account details
+ * @returns {Promise<Object>} Created account
+ */
+export async function createConnectedAccount(accountData) {
+  try {
+    const response = await apiClient.post('/stripe/create-connected-account', accountData);
+    return response.data;
+  } catch (error) {
+    console.error('Create connected account error:', error.message);
+    throw error;
+  }
+}
 
-  //const reqParam = {'stripeaccountid':stripeaccountid};
+/**
+ * Get account status
+ * @param {string} accountId - Account ID
+ * @returns {Promise<Object>} Account status
+ */
+export async function getAccountStatus(accountId) {
+  try {
+    const response = await apiClient.get(`/stripe/account-status/${accountId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Get account status error:', error.message);
+    throw error;
+  }
+}
 
-  console.log("config");
-  const response = await api
-    .get("/api/stripe/account/account/" + stripeaccountid)
-    .catch(function (error) {
-      if (error.response) {
-        // Request made and server responded
-        console.log(error.response.data);
-        console.log(error.response.status);
-        console.log(error.response.headers);
-      } else if (error.request) {
-        // The request was made but no response was received
-        console.log(error.request);
-      } else {
-        // Something happened in setting up the request that triggered an Error
-        console.log("Error", error.message);
-      }
+/**
+ * Refresh account link (for onboarding)
+ * @param {string} accountId - Account ID
+ * @returns {Promise<Object>} New account link
+ */
+export async function refreshAccountLink(accountId) {
+  try {
+    const response = await apiClient.post('/stripe/refresh-account-link', {
+      accountId,
     });
-  console.log("#$#$#$adsasd getStripeAccount", response.data);
-  //const id = response.data.name;
-  return response.data;
+    return response.data;
+  } catch (error) {
+    console.error('Refresh account link error:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Get account balance
+ * @param {string} accountId - Account ID
+ * @returns {Promise<Object>} Balance information
+ */
+export async function getAccountBalance(accountId) {
+  try {
+    const response = await apiClient.get(`/stripe/balance/${accountId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Get account balance error:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Get or create customer
+ * @returns {Promise<Object>} Customer data
+ */
+export async function getOrCreateCustomer() {
+  try {
+    const response = await apiClient.post('/stripe/customer');
+    return response.data;
+  } catch (error) {
+    console.error('Get/create customer error:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Add payment method
+ * @param {string} paymentMethodId - Stripe payment method ID
+ * @returns {Promise<Object>} Payment method data
+ */
+export async function addPaymentMethod(paymentMethodId) {
+  try {
+    const response = await apiClient.post('/stripe/payment-method', {
+      paymentMethodId,
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Add payment method error:', error.message);
+    throw error;
+  }
 }

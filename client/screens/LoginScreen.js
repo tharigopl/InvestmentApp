@@ -20,11 +20,12 @@ function LoginScreen({navigation}) {
     setIsAuthenticating(true);
     try {
       const token = await logintdtserver(email, password);
+      console.log("login1", token.token, token.userId);
       //const token = await login(email, password);
-      authCtx.authenticate(token.data.token);
-      authCtx.addUid(token.data.userId);
-      authCtx.saveStripeUserId(token.data.stripeuser);
-      console.log("login1", token);
+      authCtx.authenticate(token.token);
+      authCtx.addUid(token.userId);
+      authCtx.saveStripeUserId(token.stripeuser ? token.stripeuser : "");
+      console.log("login2", token);
       if(token.data == 'You entered the wrong password.'){
         console.log("indie if")
         navigation.navigate('Login')
@@ -34,7 +35,7 @@ function LoginScreen({navigation}) {
         );
       }
     } catch (error) {
-      console.log("login2", error)
+      console.log("login3", error)
       Alert.alert(
         'Authentication failed!',
         'Could not log you in. Please check your credentials or try again later!'

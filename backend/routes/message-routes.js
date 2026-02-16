@@ -22,18 +22,18 @@ router.post(
 );
 
 // Add/remove reaction
-router.post('/:messageId/reaction', messageController.addReaction);
+//router.post('/:messageId/reaction', messageController.addReaction);
 
 // Mark messages as read
-router.patch('/event/:eventId/read', messageController.markAsRead);
+//router.patch('/event/:eventId/read', messageController.markAsRead);
 
 // Delete message
-router.delete('/:messageId', messageController.deleteMessage);
+//router.delete('/:messageId', messageController.deleteMessage);
 
 // Edit message
-router.patch('/:messageId', messageController.editMessage);
+//router.patch('/:messageId', messageController.editMessage);
 
 // Pin/unpin message
-router.patch('/:messageId/pin', messageController.togglePin);
+//router.patch('/:messageId/pin', messageController.togglePin);
 
 module.exports = router;

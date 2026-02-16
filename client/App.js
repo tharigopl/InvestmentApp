@@ -1,3 +1,4 @@
+// client/App.js - FINAL with Logout Button
 import { useContext, useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -6,42 +7,54 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AppLoading from 'expo-app-loading';
+import { Ionicons } from '@expo/vector-icons';
+import { View, Text, Pressable, StyleSheet } from "react-native";
+
+// Auth Screens
 import LoginScreen from './screens/LoginScreen';
 import SignupScreen from './screens/SignupScreen';
 import WelcomeScreen from './screens/WelcomeScreen';
+
+// Legacy Screens
 import Chat from './screens/Chat';
-import { Colors } from './constants/styles';
-import AuthContextProvider, { AuthContext } from './store/auth-context';
-import IconButton from './components/ui/IconButton';
 import HomeScreen from './screens/HomeScreen';
 import ThaiTripScreen from './screens/ThaiTripScreen';
 import TripScreen from './screens/TripScreen';
 import GroupChatScreen from './screens/GroupChatScreen';
 import ListScreen from './screens/ListScreen';
 import LinkStripeScreen from './screens/LinkStripeScreen';
-import AllFriends from './screens/AllFriends';
-import AddFriend from './screens/AddFriend'
 import LinkStripeWebViewScreen from './screens/LinkStripeWebViewScreen';
-import StripeContextProvider, { StripeContext } from './store/stripe-context';
-import FriendsContextProvider from './store/friends-context';
+import AllFriends from './screens/AllFriends';
+import AddFriend from './screens/AddFriend';
 import ProfileScreen from './screens/ProfileScreen';
 import AllParties from './screens/AllParties';
 import ManageParty from './screens/ManageParty';
 import UserDetails from './screens/UserDetails';
-import UsersContextProvider, { UserContext } from './store/user-context';
 import ManageUser from './screens/ManageUser';
-import { GlobalStyles } from './constants/styles';
-import { Ionicons } from '@expo/vector-icons';
 import MultiSelectAddFriend from './screens/MultiSelectAddFriend';
-import { View, Text, Pressable, StyleSheet } from "react-native";
-import RootNavigator from "./navigation/RootNavigator";
 
+// ✨ NEW Investment Event Screens
+import EventFeed from './screens/EventFeed';
+import EventDetails from './screens/EventDetails';
+import CreateInvestmentEvent from './screens/CreateInvestmentEvent';
+import ContributionScreen from './screens/ContributionScreen';
+
+// Contexts & Components
+import AuthContextProvider, { AuthContext } from './store/auth-context';
+import StripeContextProvider, { StripeContext } from './store/stripe-context';
+import FriendsContextProvider from './store/friends-context';
+import UsersContextProvider, { UserContext } from './store/user-context';
+import IconButton from './components/ui/IconButton';
+import { Colors } from './constants/styles';
+import { GlobalStyles } from './constants/styles';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 const BottomTabs = createBottomTabNavigator();
 
-
+// ============================================
+// AUTH STACK (Login/Signup)
+// ============================================
 function AuthStack() {
   return (
     <Stack.Navigator
@@ -57,68 +70,146 @@ function AuthStack() {
   );
 }
 
-
-function DrawerNavig(){
+// ============================================
+// ✨ NEW: INVESTMENT EVENTS OVERVIEW (Bottom Tabs)
+// ============================================
+function InvestmentEventsOverview() {
   const authCtx = useContext(AuthContext);
-  
-  return(
-    <Drawer.Navigator
-    screenOptions={{
-      headerStyle: { backgroundColor: '#351401' },
-      headerTintColor: 'white',
-      sceneContainerStyle: { backgroundColor: '#3f2f25' },
-      drawerContentStyle: { backgroundColor: '#351401' },
-      drawerInactiveTintColor: 'white',
-      drawerActiveTintColor: '#351401',
-      drawerActiveBackgroundColor: '#e4baa1',
-    }}
-  >
-      <Drawer.Screen name="HomeScreen" component={HomeScreen} 
-        options = {{
-          drawerIcon: ({focused, size}) => (
+  const userCtx = useContext(UserContext);
+  const stripeCtx = useContext(StripeContext);
+
+  function logout(){
+    console.log("Logging out...");
+    authCtx.logout();
+    userCtx.removeuseraccount();
+    stripeCtx.removestripeaccount();
+  }
+
+  return (
+    <BottomTabs.Navigator
+      screenOptions={({ navigation }) => ({
+        headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        headerTintColor: 'white',
+        tabBarStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        tabBarActiveTintColor: GlobalStyles.colors.accent500,
+        headerLeft: ({ tintColor }) => (
+          <IconButton
+            icon="menu"
+            size={24}
+            color={tintColor}
+            onPress={() => navigation.getParent()?.openDrawer()}
+          />
+        ),
+        // ✨ LOGOUT BUTTON IN HEADER
+        headerRight: ({ tintColor }) => (
+          <IconButton
+            icon="exit"
+            size={24}
+            color={tintColor}
+            onPress={logout}
+          />
+        ),
+      })}
+    >
+      {/* Event Feed Tab */}
+      <BottomTabs.Screen
+        name="EventFeedTab"
+        component={EventFeed}
+        options={{
+          title: 'Investment Events',
+          tabBarLabel: 'Events',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="gift" size={size} color={color} />
+          ),
+        }}
+      />
+
+      {/* My Contributions Tab */}
+      <BottomTabs.Screen
+        name="MyContributionsTab"
+        component={AllParties} // You can replace with a dedicated MyContributions screen
+        options={{
+          title: 'My Contributions',
+          tabBarLabel: 'Contributions',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="wallet" size={size} color={color} />
+          ),
+        }}
+      />
+
+      {/* Portfolio Tab (Optional - for future) */}
+      <BottomTabs.Screen
+        name="PortfolioTab"
+        component={ProfileScreen} // Replace with Portfolio screen when ready
+        options={{
+          title: 'Portfolio',
+          tabBarLabel: 'Portfolio',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="trending-up" size={size} color={color} />
+          ),
+        }}
+      />
+    </BottomTabs.Navigator>
+  );
+}
+
+// ============================================
+// TRIPS OVERVIEW (Existing - Bottom Tabs)
+// ============================================
+function TripsOverview() {
+  const authCtx = useContext(AuthContext);
+  const userCtx = useContext(UserContext);
+  const stripeCtx = useContext(StripeContext);
+
+  function logout(){
+    console.log("Logging out...");
+    authCtx.logout();
+    userCtx.removeuseraccount();
+    stripeCtx.removestripeaccount();
+  }
+
+  return (
+    <BottomTabs.Navigator
+      screenOptions={({ navigation }) => ({
+        headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        headerTintColor: 'white',
+        tabBarStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        tabBarActiveTintColor: GlobalStyles.colors.accent500,
+        headerLeft: ({ tintColor }) => (
+          <IconButton
+            icon="menu"
+            size={24}
+            color={tintColor}
+            onPress={() => navigation.getParent()?.openDrawer()}
+          />
+        ),
+        headerRight: ({ tintColor }) => (
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <IconButton
+              icon="add"
+              size={24}
+              color={tintColor}
+              onPress={() => {
+                navigation.navigate('ManageParty');
+              }}
+            />
+            {/* ✨ LOGOUT BUTTON */}
             <IconButton
               icon="exit"
               size={24}
-              onPress={authCtx.logout}
+              color={tintColor}
+              onPress={logout}
             />
-         )
-        }}
-      />
-      <Drawer.Screen name="WelcomeScreen" component={WelcomeScreen} />
-      {/* <Drawer.Screen name="Chat" component={Chat} />
-      <Drawer.Screen name="ThaiTrip" component={ThaiTripScreen} /> */}
-    </Drawer.Navigator>
-    );
-}
-
-function TripsOverview() {
-  return (
-    
-    <BottomTabs.Navigator
-    screenOptions={({ navigation }) => ({
-      headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
-      headerTintColor: 'white',
-      tabBarStyle: { backgroundColor: GlobalStyles.colors.primary500 },
-      tabBarActiveTintColor: GlobalStyles.colors.accent500,
-      headerRight: ({ tintColor }) => (
-        <IconButton
-          icon="add"
-          size={24}
-          color={tintColor}
-          onPress={() => {
-            navigation.navigate('ManageParty');
-          }}
-        />
-      ),
-    })}
-  >
-
-       <BottomTabs.Screen
+          </View>
+        ),
+      })}
+    >
+      <BottomTabs.Screen
         name="BottomTripScreen"
         component={TripScreen}
         options={{
           title: 'Trip',
-          tabBarLabel: 'TripTabBarLabel',
+          tabBarLabel: 'Trip',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calendar" size={size} color={color} />
           ),
@@ -129,9 +220,9 @@ function TripsOverview() {
         component={Chat}
         options={{
           title: 'Chat',
-          tabBarLabel: 'Chatstabbarlabel',
+          tabBarLabel: 'Chat',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="hourglass" size={size} color={color} />
+            <Ionicons name="chatbubbles" size={size} color={color} />
           ),
         }}
       />
@@ -139,36 +230,55 @@ function TripsOverview() {
   );
 }
 
+// ============================================
+// PROFILE OVERVIEW (Existing - Bottom Tabs)
+// ============================================
 function ProfileOverview() {
-  return (
-    
-    <BottomTabs.Navigator
-    screenOptions={({ navigation }) => ({
-      headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
-      headerTintColor: 'white',
-      tabBarStyle: { backgroundColor: GlobalStyles.colors.primary500 },
-      tabBarActiveTintColor: GlobalStyles.colors.accent500,
-      // headerRight: ({ tintColor }) => (
-      //   <IconButton
-      //     icon="add"
-      //     size={24}
-      //     color={tintColor}
-      //     onPress={() => {
-      //       navigation.navigate('ManageUser');
-      //     }}
-      //   />
-      // ),
-    })}
-  >
+  const authCtx = useContext(AuthContext);
+  const userCtx = useContext(UserContext);
+  const stripeCtx = useContext(StripeContext);
 
-       <BottomTabs.Screen
+  function logout(){
+    console.log("Logging out...");
+    authCtx.logout();
+    userCtx.removeuseraccount();
+    stripeCtx.removestripeaccount();
+  }
+
+  return (
+    <BottomTabs.Navigator
+      screenOptions={({ navigation }) => ({
+        headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        headerTintColor: 'white',
+        tabBarStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        tabBarActiveTintColor: GlobalStyles.colors.accent500,
+        headerLeft: ({ tintColor }) => (
+          <IconButton
+            icon="menu"
+            size={24}
+            color={tintColor}
+            onPress={() => navigation.getParent()?.openDrawer()}
+          />
+        ),
+        // ✨ LOGOUT BUTTON IN HEADER
+        headerRight: ({ tintColor }) => (
+          <IconButton
+            icon="exit"
+            size={24}
+            color={tintColor}
+            onPress={logout}
+          />
+        ),
+      })}
+    >
+      <BottomTabs.Screen
         name="BottomManageUserScreen"
         component={ManageUser}
         options={{
           title: 'Profile',
           tabBarLabel: 'My Profile',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar" size={size} color={color} />
+            <Ionicons name="person" size={size} color={color} />
           ),
         }}
       />
@@ -179,7 +289,7 @@ function ProfileOverview() {
           title: 'Friends',
           tabBarLabel: 'My Friends',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="hourglass" size={size} color={color} />
+            <Ionicons name="people" size={size} color={color} />
           ),
         }}
       />
@@ -190,17 +300,26 @@ function ProfileOverview() {
           title: 'Add Friends',
           tabBarLabel: 'Add Friends',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="hourglass" size={size} color={color} />
+            <Ionicons name="person-add" size={size} color={color} />
           ),
           headerShown: true,
-          headerRight: () => (
-            <Pressable
-              style={{ paddingRight: 16 }}
-              onPressIn={() => console.log("Search")}
-              hitslop={5}
-            >
-              <Ionicons name="save" size={28} color={"#faf2c4"} />
-            </Pressable>
+          headerRight: ({ tintColor }) => (
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Pressable
+                style={{ paddingRight: 8 }}
+                onPressIn={() => console.log("Search")}
+                hitSlop={5}
+              >
+                <Ionicons name="save" size={28} color={"#faf2c4"} />
+              </Pressable>
+              {/* ✨ LOGOUT BUTTON */}
+              <IconButton
+                icon="exit"
+                size={24}
+                color={tintColor}
+                onPress={logout}
+              />
+            </View>
           )
         }}
       />
@@ -208,47 +327,66 @@ function ProfileOverview() {
   );
 }
 
+// ============================================
+// PARTIES OVERVIEW (Existing - Bottom Tabs)
+// ============================================
 function PartiesOverview() {
-  return (
-    
-    <BottomTabs.Navigator
-    screenOptions={({ navigation }) => ({
-      headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
-      headerTintColor: 'white',
-      tabBarStyle: { backgroundColor: GlobalStyles.colors.primary500 },
-      tabBarActiveTintColor: GlobalStyles.colors.accent500,
-      // headerRight: ({ tintColor }) => (
-      //   <IconButton
-      //     icon="add"
-      //     size={24}
-      //     color={tintColor}
-      //     onPress={() => {
-      //       navigation.navigate('ManageParty');
-      //     }}
-      //   />
-      // ),
-    })}
-  >
+  const authCtx = useContext(AuthContext);
+  const userCtx = useContext(UserContext);
+  const stripeCtx = useContext(StripeContext);
 
-       <BottomTabs.Screen
-        name="AllParties"
+  function logout(){
+    console.log("Logging out...");
+    authCtx.logout();
+    userCtx.removeuseraccount();
+    stripeCtx.removestripeaccount();
+  }
+
+  return (
+    <BottomTabs.Navigator
+      screenOptions={({ navigation }) => ({
+        headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        headerTintColor: 'white',
+        tabBarStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        tabBarActiveTintColor: GlobalStyles.colors.accent500,
+        headerLeft: ({ tintColor }) => (
+          <IconButton
+            icon="menu"
+            size={24}
+            color={tintColor}
+            onPress={() => navigation.getParent()?.openDrawer()}
+          />
+        ),
+        // ✨ LOGOUT BUTTON IN HEADER
+        headerRight: ({ tintColor }) => (
+          <IconButton
+            icon="exit"
+            size={24}
+            color={tintColor}
+            onPress={logout}
+          />
+        ),
+      })}
+    >
+      <BottomTabs.Screen
+        name="BottomAllParties"
         component={AllParties}
         options={{
           title: 'All Parties',
           tabBarLabel: 'All Parties',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar" size={size} color={color} />
+            <Ionicons name="list" size={size} color={color} />
           ),
         }}
       />
       <BottomTabs.Screen
-        name="ManageParties"
+        name="BottomManageParty"
         component={ManageParty}
         options={{
           title: 'Manage Party',
-          tabBarLabel: 'Manage Parties',
+          tabBarLabel: 'Manage',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="hourglass" size={size} color={color} />
+            <Ionicons name="create" size={size} color={color} />
           ),
         }}
       />
@@ -256,162 +394,338 @@ function PartiesOverview() {
   );
 }
 
-function StackNavig(){
+// ============================================
+// ✨ UPDATED: DRAWER NAVIGATOR (Main Menu)
+// ============================================
+function DrawerNavig(){
   const authCtx = useContext(AuthContext);
-  return(
-  <Stack.Navigator initialRouteName="HomeScreen">
-      <Stack.Screen name="HomeScreen" component={HomeScreen} 
-        options = {{
-          
-        //   headerRight: ({focused, size}) => (
-        //     <IconButton
-        //       icon="exit"
-        //       size={24}
-        //       onPress={authCtx.logout}
-        //     />
-        //  )
+  const userCtx = useContext(UserContext);
+  const stripeCtx = useContext(StripeContext);
+
+  function logout(){
+    console.log("Logging out...");
+    authCtx.logout();
+    userCtx.removeuseraccount();
+    stripeCtx.removestripeaccount();
+  }
+  
+  return (
+    <Drawer.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        headerTintColor: 'white',
+        sceneContainerStyle: { backgroundColor: GlobalStyles.colors.gray50 },
+        drawerContentStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        drawerInactiveTintColor: 'white',
+        drawerActiveTintColor: GlobalStyles.colors.primary500,
+        drawerActiveBackgroundColor: GlobalStyles.colors.accent500,
+        // ✨ LOGOUT BUTTON IN ALL DRAWER SCREENS
+        headerRight: ({ tintColor }) => (
+          <IconButton
+            icon="exit"
+            size={24}
+            color={tintColor}
+            onPress={logout}
+          />
+        ),
+      }}
+    >
+      {/* ✨ NEW: Investment Events - Main Feature */}
+      <Drawer.Screen 
+        name="InvestmentEvents" 
+        component={InvestmentEventsOverview}
+        options={{
+          title: '💰 Investment Events',
+          drawerIcon: ({ focused, size, color }) => (
+            <Ionicons name="gift" size={size} color={color} />
+          ),
+          headerShown: false, // InvestmentEventsOverview has its own header with logout
         }}
       />
-      <Stack.Screen name="WelcomeScreen" component={WelcomeScreen} />
-      <Stack.Screen name="Chat" component={Chat} />
-      <Stack.Screen name="ThaiTrip" component={ThaiTripScreen} />
-      <Stack.Screen name="GroupChatScreen" component={GroupChatScreen} />
-      <Stack.Screen name="LinkStripeScreen" component={LinkStripeScreen} />
-      <Stack.Screen name="LinkStripeWebViewScreen" component={LinkStripeWebViewScreen} />
-      <Stack.Screen name="AllPartiesOverview" component={PartiesOverview} options={{headerShown:true}}/>
-      <Stack.Screen name="AllTripOverview" component={TripOverview} options={{headerShown:false}}/>
-      <Stack.Screen name="AllFriends" component={AllFriends} 
-        options={({ navigation, route }) => ({          
-          // Add a placeholder button without the `onPress` to avoid flicker
-          headerRight: ({focused, size}) => (
-                <IconButton
-                  icon="add"
-                  size={24}
-                  onPress={() => {
-                    navigation.navigate('ListScreen');
-                  }}
-                />
-              )
-        })}        
+
+      {/* Home Screen */}
+      <Drawer.Screen 
+        name="HomeScreen" 
+        component={HomeScreen}
+        options={{
+          title: 'Home',
+          drawerIcon: ({ focused, size, color }) => (
+            <Ionicons name="home" size={size} color={color} />
+          ),
+        }}
       />
-      <Stack.Screen name="ListScreen" component={ListScreen} 
-        options={({ navigation, route }) => ({          
-          // Add a placeholder button without the `onPress` to avoid flicker
-          headerRight: ({focused, size}) => (
-                <IconButton
-                  icon="save"
-                  size={24}
-                  onPress={() => {
-                    navigation.navigate('AllFriends');
-                  }}
-                />
-              )
-        })}        
+
+      {/* Profile */}
+      <Drawer.Screen 
+        name="ProfileOverviewDrawer" 
+        component={ProfileOverview}
+        options={{
+          title: 'Profile',
+          drawerIcon: ({ focused, size, color }) => (
+            <Ionicons name="person" size={size} color={color} />
+          ),
+          headerShown: false, // ProfileOverview has its own header with logout
+        }}
       />
-      <Stack.Screen name="AddFriend" component={AddFriend} />
-      {/* <Stack.Screen name="Profile" component={UserDetails} /> */}
-      <Stack.Screen name="AllParties" component={AllParties} />
-      <Stack.Screen name="ManageParty" component={ManageParty} />
-      <Stack.Screen name="ManageUser" component={ManageUser} />
-      <Stack.Screen name="ChatStack" component={Chat} />
-      <Stack.Screen name="ThaiTrip" component={ThaiTripScreen} />
-    </Stack.Navigator>
-    );
+
+      {/* Friends */}
+      <Drawer.Screen 
+        name="FriendsOverviewDrawer" 
+        component={AllFriends}
+        options={{
+          title: 'Friends',
+          drawerIcon: ({ focused, size, color }) => (
+            <Ionicons name="people" size={size} color={color} />
+          ),
+        }}
+      />
+
+      {/* Legacy: Trips */}
+      <Drawer.Screen 
+        name="TripsOverviewDrawer" 
+        component={TripsOverview}
+        options={{
+          title: 'Trips',
+          drawerIcon: ({ focused, size, color }) => (
+            <Ionicons name="airplane" size={size} color={color} />
+          ),
+          headerShown: false, // TripsOverview has its own header with logout
+        }}
+      />
+
+      {/* Welcome Screen (Optional) */}
+      <Drawer.Screen 
+        name="WelcomeScreen" 
+        component={WelcomeScreen}
+        options={{
+          title: 'Welcome',
+          drawerIcon: ({ focused, size, color }) => (
+            <Ionicons name="hand-right" size={size} color={color} />
+          ),
+        }}
+      />
+    </Drawer.Navigator>
+  );
 }
 
+// ============================================
+// ✨ UPDATED: AUTHENTICATED STACK (After Login)
+// ============================================
 function AuthenticatedStack() {
   const authCtx = useContext(AuthContext);
   const userCtx = useContext(UserContext);
   const stripeCtx = useContext(StripeContext);
 
   function logout(){
-    console.log("Log out ");
+    console.log("Logging out...");
     authCtx.logout();
     userCtx.removeuseraccount();
     stripeCtx.removestripeaccount();
-    console.log("Contexts 1", authCtx, userCtx);
   }
+
   return (
-    // <Drawer.Navigator screenOptions={{ headerStyle: { backgroundColor: 'papayawhip' }, headerRight: ({tintColor}) => <IconButton icon="exit" color={tintColor} size={24} onPress={logout}/>}}>
-    //   {/* <Stack.Screen name="TourDeThailand" component={DrawerNavig} 
-    //     options={{
-    //       headerRight: ({tintColor}) => <IconButton icon="exit" color={tintColor} size={24} onPress={authCtx.logout}/>,
-    //     }}
-    //   /> */}
-    //   <Drawer.Screen name="Home" component={StackNavig} /> 
-    //   <Drawer.Screen name="Chat1" component={Chat} />
-    //   <Drawer.Screen name="ThaiTrip" component={ThaiTripScreen} />
-    //   {/* <Drawer.Screen name="Profile" component={UserDetails} /> */}
-    // </Drawer.Navigator> 
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: '#351401' },
+        headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
         headerTintColor: 'white',
-        contentStyle: { backgroundColor: '#3f2f25' },
+        contentStyle: { backgroundColor: GlobalStyles.colors.gray50 },
+        // ✨ DEFAULT LOGOUT BUTTON FOR ALL STACK SCREENS
+        headerRight: ({ tintColor }) => (
+          <IconButton
+            icon="exit"
+            size={24}
+            color={tintColor}
+            onPress={logout}
+          />
+        ),
       }}
     >
+      {/* Main Drawer */}
       <Stack.Screen
-            name="Drawer"
-            component={DrawerNavig}
-            options={{
-              headerRight: ({tintColor}) => <IconButton icon="exit" color={tintColor} size={24} onPress={authCtx.logout}/>,
-            }}
-          />                
+        name="Drawer"
+        component={DrawerNavig}
+        options={{
+          headerShown: false, // Drawer has its own headers
+        }}
+      />
+
+      {/* ============================================ */}
+      {/* ✨ NEW: INVESTMENT EVENT SCREENS */}
+      {/* ============================================ */}
       
-      <Stack.Screen name="AllPartiesOverview" component={PartiesOverview} options={{headerShown:true}}/>
-      <Stack.Screen name="AllTripsOverview" component={TripsOverview} options={{headerShown:true}}/>
-      <Stack.Screen name="ProfileOverview" component={ProfileOverview} options={{headerShown:true}}/>
+      {/* Event Details */}
+      <Stack.Screen 
+        name="EventDetails" 
+        component={EventDetails}
+        options={{
+          title: 'Event Details',
+          presentation: 'card',
+        }}
+      />
+
+      {/* Create Investment Event */}
+      <Stack.Screen 
+        name="CreateInvestmentEvent" 
+        component={CreateInvestmentEvent}
+        options={{
+          title: 'Create Event',
+          presentation: 'card',
+        }}
+      />
+
+      {/* Contribution Screen */}
+      <Stack.Screen 
+        name="ContributionScreen" 
+        component={ContributionScreen}
+        options={{
+          title: 'Contribute',
+          presentation: 'card',
+        }}
+      />
+
+      {/* ============================================ */}
+      {/* EXISTING SCREENS */}
+      {/* ============================================ */}
+
+      {/* Overview Screens */}
+      <Stack.Screen 
+        name="AllPartiesOverview" 
+        component={PartiesOverview} 
+        options={{ headerShown: false }} // PartiesOverview has its own header with logout
+      />
+      <Stack.Screen 
+        name="AllTripsOverview" 
+        component={TripsOverview} 
+        options={{ headerShown: false }} // TripsOverview has its own header with logout
+      />
+      <Stack.Screen 
+        name="ProfileOverview" 
+        component={ProfileOverview} 
+        options={{ headerShown: false }} // ProfileOverview has its own header with logout
+      />
+
+      {/* Party Management */}
       <Stack.Screen
         name="ManageParty"
         component={ManageParty}
         options={{
           presentation: 'modal',
+          title: 'Manage Party',
         }}
       />
-      <Stack.Screen name="LinkStripeScreen" component={LinkStripeScreen} 
-       options={{headerShown:true}}
+      <Stack.Screen 
+        name="AllParties" 
+        component={AllParties}
+        options={{ title: 'All Parties' }}
       />
-      <Stack.Screen name="ProfileScreen" component={ProfileScreen} 
-       options={{headerShown:false}}
+
+      {/* Friend Management */}
+      <Stack.Screen 
+        name="AllFriends" 
+        component={AllFriends}
+        options={({ navigation }) => ({
+          title: 'Friends',
+          headerRight: ({ tintColor }) => (
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <IconButton
+                icon="add"
+                size={24}
+                color={tintColor}
+                onPress={() => navigation.navigate('ListScreen')}
+              />
+              {/* ✨ LOGOUT BUTTON */}
+              <IconButton
+                icon="exit"
+                size={24}
+                color={tintColor}
+                onPress={logout}
+              />
+            </View>
+          )
+        })}
       />
-      <Stack.Screen name="ManageUser" component={ManageUser} />
-      <Stack.Screen name="AddFriend" component={AddFriend} />
-      <Stack.Screen name="MultiSelectAddFriend" component={MultiSelectAddFriend} />
-      {/* <Stack.Screen name="Profile" component={UserDetails} /> */}
-      <Stack.Screen name="AllParties" component={AllParties} />
-      <Stack.Screen name="AllFriends" component={AllFriends} 
-        options={({ navigation, route }) => ({          
-          // Add a placeholder button without the `onPress` to avoid flicker
-          headerRight: ({focused, size}) => (
-                <IconButton
-                  icon="add"
-                  size={24}
-                  onPress={() => {
-                    navigation.navigate('ListScreen');
-                  }}
-                />
-              )
-        })}        
+      <Stack.Screen 
+        name="AddFriend" 
+        component={AddFriend}
+        options={{ title: 'Add Friend' }}
       />
-      <Stack.Screen name="ThaiTrip" component={ThaiTripScreen} />
-      <Stack.Screen name="ChatStack" component={Chat} />
-      <Stack.Screen name="ListScreen" component={ListScreen} 
-        options={({ navigation, route }) => ({          
-          // Add a placeholder button without the `onPress` to avoid flicker
-          headerRight: ({focused, size}) => (
-                <IconButton
-                  icon="save"
-                  size={24}
-                  onPress={() => {
-                    navigation.navigate('AllFriends');
-                  }}
-                />
-              )
-        })}        
+      <Stack.Screen 
+        name="MultiSelectAddFriend" 
+        component={MultiSelectAddFriend}
+        options={{ title: 'Select Friends' }}
+      />
+      <Stack.Screen 
+        name="ListScreen" 
+        component={ListScreen}
+        options={({ navigation }) => ({
+          title: 'Friend List',
+          headerRight: ({ tintColor }) => (
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <IconButton
+                icon="save"
+                size={24}
+                color={tintColor}
+                onPress={() => navigation.navigate('AllFriends')}
+              />
+              {/* ✨ LOGOUT BUTTON */}
+              <IconButton
+                icon="exit"
+                size={24}
+                color={tintColor}
+                onPress={logout}
+              />
+            </View>
+          )
+        })}
+      />
+
+      {/* User Management */}
+      <Stack.Screen 
+        name="ManageUser" 
+        component={ManageUser}
+        options={{ title: 'Manage Profile' }}
+      />
+      <Stack.Screen 
+        name="ProfileScreen" 
+        component={ProfileScreen}
+        options={{ headerShown: false }}
+      />
+
+      {/* Stripe */}
+      <Stack.Screen 
+        name="LinkStripeScreen" 
+        component={LinkStripeScreen}
+        options={{ headerShown: true, title: 'Link Stripe' }}
+      />
+      <Stack.Screen 
+        name="LinkStripeWebViewScreen" 
+        component={LinkStripeWebViewScreen}
+        options={{ title: 'Stripe Setup' }}
+      />
+
+      {/* Legacy */}
+      <Stack.Screen 
+        name="ThaiTrip" 
+        component={ThaiTripScreen}
+        options={{ title: 'Thai Trip' }}
+      />
+      <Stack.Screen 
+        name="ChatStack" 
+        component={Chat}
+        options={{ title: 'Chat' }}
+      />
+      <Stack.Screen 
+        name="GroupChatScreen" 
+        component={GroupChatScreen}
+        options={{ title: 'Group Chat' }}
       />
     </Stack.Navigator>
-  );   
+  );
 }
+
+// ============================================
+// NAVIGATION CONTAINER
+// ============================================
 function Navigation() {
   const authCtx = useContext(AuthContext);
   return (
@@ -421,9 +735,14 @@ function Navigation() {
     </NavigationContainer>
   );
 }
+
+// ============================================
+// ROOT COMPONENT (Handles Auth State)
+// ============================================
 function Root() {
   const [isTryingLogin, setIsTryingLogin] = useState(true);
   const authCtx = useContext(AuthContext);
+
   useEffect(() => {
     async function fetchToken() {
       const storedToken = await AsyncStorage.getItem('token');
@@ -452,12 +771,10 @@ function Root() {
   return <Navigation />;
 }
 
-// export default function App() {
-//   return <RootNavigator />;
-// }
-
+// ============================================
+// MAIN APP COMPONENT
+// ============================================
 export default function App() {
-  
   return (
     <>
       <StatusBar style="light" />
@@ -466,7 +783,7 @@ export default function App() {
           <StripeContextProvider>
             <FriendsContextProvider>
               <Root />
-              </FriendsContextProvider>
+            </FriendsContextProvider>
           </StripeContextProvider>
         </UsersContextProvider>
       </AuthContextProvider>

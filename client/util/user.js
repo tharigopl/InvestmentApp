@@ -1,109 +1,104 @@
-import axios from 'axios';
-
-const API_KEY = 'AIzaSyDK6dLf66nFmxkJb58V5YMaZwvQYigadOU';
-const API_DOMAIN = '192.168.0.157:5000';
 //const API_DOMAIN = process.env.EXPO_PUBLIC_API_DOMAIN;
 //const API_DOMAIN = 'http://192.168.0.165:5000';
 //const API_DOMAIN = '192.168.0.82';
 //const API_DOMAIN = 'https://happykid-396701.uc.r.appspot.com';
-const baseurl = `http://${API_DOMAIN}`;
-const api = axios.create({
-  baseURL: baseurl,
-});
 
-async function addFriendsAPI(token, friendsemail, uid) {
-    console.log("API_DOMAIN",API_DOMAIN);
-    const config = {
-        headers: { Authorization: `Bearer ${token}` }
-    };
+// client/util/user.js - Refactored to use apiClient
+import apiClient from './api-client';
 
+/**
+ * Add friends by email to user
+ * @param {Array<string>} friendsemail - Array of friend emails
+ * @param {string} uid - User ID
+ * @returns {Promise<Object>} Updated user data
+ */
+async function addFriendsAPI(friendsemail, uid) {
+  try {
+    console.log("Adding friends:", friendsemail, "to user:", uid);
     
-    var url = `/api/users/${uid}/friendsemail`;
-
-    console.log("Add friends  ", token, friendsemail, uid);
+    const response = await apiClient.patch(`/users/${uid}/friendsemail`, {
+      emailids: friendsemail,
+    });
     
-    console.log(url)
-    const name = 'test';
-    const response = await api.patch(url, {"emailids":friendsemail}, config);
-
     const data = response.data;
-    console.log("Add Friends API ", data)
+    console.log("Add friends API response:", data);
     return data;
+  } catch (error) {
+    console.error('Add friends error:', error.message);
+    throw error;
+  }
 }
 
-async function getUserDetailsAPI(token, uid) {
-    console.log("API_DOMAIN",API_DOMAIN);
-    const config = {
-        headers: { Authorization: `Bearer ${token}` }
-    };
-
+/**
+ * Get user details
+ * @param {string} uid - User ID
+ * @returns {Promise<Object>} User details
+ */
+async function getUserDetailsAPI(uid) {
+  try {
+    console.log("Getting user details for:", uid);
     
-    var url = `/api/users/${uid}`;
-
-    console.log("Get User Details  ", token, uid);
+    const response = await apiClient.get(`/users/${uid}`);
     
-    console.log(url)
-    const name = 'test';
-    const response = await api.get(url, config);
-
     const data = response.data;
-    //data["user"]["id"] = data["user"]["_id"];
-    //console.log("User Details  ", data)
-
-
-    // const users = [];
-    // //users.push(data["user"]);
-
-
-    // const userObj = {
-    //     id: data["user"]["id"],
-    //     email:'',
-    //     fname: '',
-    //     lname: '',
-    //     mname: '',
-    //     phoneno:'',
-    //     street:'',
-    //     unit:'',
-    //     city:'',
-    //     state:'',
-    //     postalcode:'',
-    //     country:'',
-    //     dateofbirth:'',
-    //     cntrytaxresidence:'',
-    //     fundingsource:'',
-    //   };
-    //   users.push(userObj);
+    console.log("User details retrieved");
     return data;
+  } catch (error) {
+    console.error('Get user details error:', error.message);
+    throw error;
+  }
 }
 
-async function updateUserAPI(token, uid, userdata) {
-    console.log("API_DOMAIN",API_DOMAIN);
-    const config = {
-        headers: { Authorization: `Bearer ${token}` }
-    };
-
+/**
+ * Update user information
+ * @param {string} uid - User ID
+ * @param {Object} userdata - User data to update
+ * @returns {Promise<Object>} Updated user data
+ */
+async function updateUserAPI(uid, userdata) {
+  try {
+    console.log("Updating user:", uid, "with data:", userdata);
     
-    var url = `/api/users/${uid}/`;
-
-    console.log("Updating user  ", token, userdata, uid);
+    const response = await apiClient.patch(`/users/${uid}/`, userdata);
     
-    console.log(url)
-    const name = 'test';
-    const response = await api.patch(url, userdata, config);
-
     const data = response.data;
-    console.log("Add Update user API ", data)
+    console.log("Update user API response:", data);
     return data;
+  } catch (error) {
+    console.error('Update user error:', error.message);
+    throw error;
+  }
 }
 
-export function getUserDetails(token, uid) {
-    return getUserDetailsAPI(token, uid);
+// ============================================
+// EXPORTED FUNCTIONS
+// ============================================
+
+/**
+ * Get user details (no token needed - handled by interceptor)
+ * @param {string} uid - User ID
+ * @returns {Promise<Object>} User details
+ */
+export function getUserDetails(uid) {
+  return getUserDetailsAPI(uid);
 }
 
-export function addFriends(token, friends, uid) {
-    return addFriendsAPI(token, friends, uid);
+/**
+ * Add friends to user (no token needed - handled by interceptor)
+ * @param {Array<string>} friends - Array of friend emails
+ * @param {string} uid - User ID
+ * @returns {Promise<Object>} Updated user
+ */
+export function addFriends(friends, uid) {
+  return addFriendsAPI(friends, uid);
 }
 
-export function updateUser(token, uid, userdata) {
-    return updateUserAPI(token, uid, userdata);
+/**
+ * Update user (no token needed - handled by interceptor)
+ * @param {string} uid - User ID
+ * @param {Object} userdata - User data to update
+ * @returns {Promise<Object>} Updated user
+ */
+export function updateUser(uid, userdata) {
+  return updateUserAPI(uid, userdata);
 }
