@@ -1,19 +1,45 @@
-import React from "react";
-import { View, Text, FlatList, Pressable, StyleSheet } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator, RefreshControl } from "react-native";
 import { globalStyles } from "../../theme/globalStyles";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import WebLayout from "../../components/WebLayout";
 import { Platform, useWindowDimensions } from "react-native";
-
+import { getEvents } from "../../util/events";
 
 
 
 export default function HomeScreen({ navigation }) {
-  const events = []; // Replace later with API data
+  const [events, setEvents] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === "web" && width >= 900;
   const numColumns = isDesktop ? 2 : 1;
+
+  // Load events on mount
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  const loadEvents = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getEvents();
+      setEvents(data || []);
+    } catch (error) {
+      console.error('Failed to load events:', error);
+      setEvents([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadEvents();
+    setIsRefreshing(false);
+  };
 
 
 
@@ -26,6 +52,19 @@ export default function HomeScreen({ navigation }) {
       </Text>
     </View>
   );
+
+  if (isLoading) {
+    return (
+      <WebLayout>
+        <View style={[globalStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={{ marginTop: spacing.md, color: colors.textSecondary }}>
+            Loading events...
+          </Text>
+        </View>
+      </WebLayout>
+    );
+  }
 
   return (
     <WebLayout>
@@ -45,12 +84,15 @@ export default function HomeScreen({ navigation }) {
             key={numColumns}   
             data={events}
             numColumns={numColumns}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item._id || item.id}
             renderItem={({ item }) => (
             <View style={styles.eventCard}>
-                <Text style={styles.eventTitle}>{item.title}</Text>
+                <Text style={styles.eventTitle}>{item.eventTitle || item.title}</Text>
                 <Text style={styles.eventAmount}>
-                ${item.raised} raised
+                ${item.currentAmount || item.raised || 0} / ${item.targetAmount || 0}
+                </Text>
+                <Text style={styles.eventStatus}>
+                {item.status || 'active'}
                 </Text>
             </View>
             )}
@@ -59,6 +101,13 @@ export default function HomeScreen({ navigation }) {
                 numColumns > 1 ? { gap: 20 } : undefined
               }
             contentContainerStyle={{ marginTop: spacing.lg }}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                colors={[colors.primary]}
+              />
+            }
         />
         </View>
     </WebLayout>
@@ -108,5 +157,13 @@ const styles = StyleSheet.create({
   eventAmount: {
     color: colors.textSecondary,
     marginTop: spacing.sm,
+  },
+
+  eventStatus: {
+    color: colors.primary,
+    marginTop: spacing.xs,
+    fontSize: 12,
+    fontWeight: '500',
+    textTransform: 'capitalize',
   },
 });

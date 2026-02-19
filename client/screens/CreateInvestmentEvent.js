@@ -450,11 +450,23 @@ export default function CreateInvestmentEvent({ navigation }) {
       
       console.log('✅ Event created successfully:', result);
       
-      Alert.alert(
-        'Success!',
-        'Your investment event has been created successfully.',
-        [{ text: 'OK', onPress: () => navigation.navigate('EventFeed') }]
-      );
+      // ✅ Navigate immediately (no waiting for Alert button)
+      try {
+        //navigation.navigate('HomeScreen');
+        // Resets navigation stack to fresh Home screen
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Home' }],
+        });
+      } catch (navError) {
+        console.log('Home not found, trying to go back');
+        navigation.goBack();
+      }
+
+      // Show success message AFTER navigation
+      setTimeout(() => {
+        Alert.alert('Success!', 'Your investment event has been created successfully.');
+      }, 500);
     } catch (error) {
       console.error('❌ Create event error:', error);
       console.error('Error message:', error.message);

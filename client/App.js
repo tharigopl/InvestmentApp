@@ -201,7 +201,7 @@ function AddFriendsOverview() {
         name="AddFriendScreen"
         component={AddFriendScreen}
         options={{
-          title: 'Investment Events',
+          title: 'Add Friend',
           tabBarLabel: 'Events',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="gift" size={size} color={color} />
