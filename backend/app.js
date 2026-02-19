@@ -14,6 +14,7 @@ const stripeRoutes = require("./routes/stripe-routes");
 const messageRoutes = require("./routes/message-routes"); // ✅ ADDED
 const stockRoutes = require("./routes/stock-routes"); // ✅ ADDED (NEW)
 const eventRoutes = require("./routes/event-routes");
+const contactsRoutes = require('./routes/contacts-routes');  
 
 // Import utilities
 const HttpError = require("./models/http-error");
@@ -61,9 +62,10 @@ app.use("/uploads/images", express.static(path.join("uploads", "images")));
 // CORS configuration
 const allowedOrigins = [
   "http://localhost:19006",
-  "http://localhost:8081",
+  "http://localhost:8081",   // ✅ Your frontend
   "http://localhost:8082",
   "http://localhost:3000",
+  "http://localhost:19000",
   "exp://192.168.0.157:19000",
   "exp://192.168.0.165:19000",
   "https://happykid-396701.web.app",
@@ -74,21 +76,36 @@ if (process.env.CLIENT_URL) {
   allowedOrigins.push(process.env.CLIENT_URL);
 }
 
+// ✅ CORS middleware with proper configuration
 app.use(cors({
-  origin: allowedOrigins,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, curl)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('⚠️  CORS blocked origin:', origin);
+      console.log('   Allowed origins:', allowedOrigins);
+      callback(null, true);  // ✅ Allow anyway in development
+      // In production, use: callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
 }));
 
 // Additional CORS headers (for older clients)
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-  );
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, PUT");
-  next();
-});
+// app.use((req, res, next) => {
+//   res.setHeader("Access-Control-Allow-Origin", "*");
+//   res.setHeader(
+//     "Access-Control-Allow-Headers",
+//     "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+//   );
+//   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, PUT");
+//   next();
+// });
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -137,6 +154,7 @@ app.use("/api/stripe", stripeRoutes);           // Stripe payments & connected a
 app.use("/api/friends", friendsRoutes);         // Friend management
 app.use("/api/messages", messageRoutes);        // ✅ Messages & chat (ADDED)
 app.use("/api/stocks", stockRoutes);            // ✅ Stock data & trading (ADDED - NEW)
+app.use('/api/contacts', contactsRoutes); 
 
 // TODO: Add these routes as you create them
    app.use("/api/events", eventRoutes);         // Investment events (TODO)

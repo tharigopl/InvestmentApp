@@ -1,4 +1,4 @@
-// client/App.js - FINAL with Logout Button
+0// client/App.js - FINAL with Logout Button
 import { useContext, useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -23,6 +23,7 @@ import TripScreen from './screens/TripScreen';
 import GroupChatScreen from './screens/GroupChatScreen';
 import ListScreen from './screens/ListScreen';
 import LinkStripeScreen from './screens/LinkStripeScreen';
+import UserSearchScreen from './screens/UserSearchScreen';
 import LinkStripeWebViewScreen from './screens/LinkStripeWebViewScreen';
 import AllFriends from './screens/AllFriends';
 import AddFriend from './screens/AddFriend';
@@ -33,7 +34,7 @@ import UserDetails from './screens/UserDetails';
 import ManageUser from './screens/ManageUser';
 import MultiSelectAddFriend from './screens/MultiSelectAddFriend';
 
-// ✨ NEW Investment Event Screens
+//  NEW Investment Event Screens
 import EventFeed from './screens/EventFeed';
 import EventDetails from './screens/EventDetails';
 import CreateInvestmentEvent from './screens/CreateInvestmentEvent';
@@ -47,6 +48,7 @@ import UsersContextProvider, { UserContext } from './store/user-context';
 import IconButton from './components/ui/IconButton';
 import { Colors } from './constants/styles';
 import { GlobalStyles } from './constants/styles';
+import AddFriendScreen from './screens/AddFriendScreen';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -71,7 +73,7 @@ function AuthStack() {
 }
 
 // ============================================
-// ✨ NEW: INVESTMENT EVENTS OVERVIEW (Bottom Tabs)
+//  NEW: INVESTMENT EVENTS OVERVIEW (Bottom Tabs)
 // ============================================
 function InvestmentEventsOverview() {
   const authCtx = useContext(AuthContext);
@@ -100,7 +102,7 @@ function InvestmentEventsOverview() {
             onPress={() => navigation.getParent()?.openDrawer()}
           />
         ),
-        // ✨ LOGOUT BUTTON IN HEADER
+        //  LOGOUT BUTTON IN HEADER
         headerRight: ({ tintColor }) => (
           <IconButton
             icon="exit"
@@ -154,6 +156,64 @@ function InvestmentEventsOverview() {
 }
 
 // ============================================
+//  NEW: INVESTMENT EVENTS OVERVIEW (Bottom Tabs)
+// ============================================
+function AddFriendsOverview() {
+  const authCtx = useContext(AuthContext);
+  const userCtx = useContext(UserContext);
+  const stripeCtx = useContext(StripeContext);
+
+  function logout(){
+    console.log("Logging out...");
+    authCtx.logout();
+    userCtx.removeuseraccount();
+    stripeCtx.removestripeaccount();
+  }
+
+  return (
+    <BottomTabs.Navigator
+      screenOptions={({ navigation }) => ({
+        headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        headerTintColor: 'white',
+        tabBarStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        tabBarActiveTintColor: GlobalStyles.colors.accent500,
+        headerLeft: ({ tintColor }) => (
+          <IconButton
+            icon="menu"
+            size={24}
+            color={tintColor}
+            onPress={() => navigation.getParent()?.openDrawer()}
+          />
+        ),
+        //  LOGOUT BUTTON IN HEADER
+        headerRight: ({ tintColor }) => (
+          <IconButton
+            icon="exit"
+            size={24}
+            color={tintColor}
+            onPress={logout}
+          />
+        ),
+      })}
+    >
+      {/* Add Friend Screen */}
+      <BottomTabs.Screen
+        name="AddFriendScreen"
+        component={AddFriendScreen}
+        options={{
+          title: 'Investment Events',
+          tabBarLabel: 'Events',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="gift" size={size} color={color} />
+          ),
+        }}
+      />      
+    </BottomTabs.Navigator>
+  );
+}
+
+
+// ============================================
 // TRIPS OVERVIEW (Existing - Bottom Tabs)
 // ============================================
 function TripsOverview() {
@@ -193,7 +253,7 @@ function TripsOverview() {
                 navigation.navigate('ManageParty');
               }}
             />
-            {/* ✨ LOGOUT BUTTON */}
+            {/*  LOGOUT BUTTON */}
             <IconButton
               icon="exit"
               size={24}
@@ -260,7 +320,7 @@ function ProfileOverview() {
             onPress={() => navigation.getParent()?.openDrawer()}
           />
         ),
-        // ✨ LOGOUT BUTTON IN HEADER
+        //  LOGOUT BUTTON IN HEADER
         headerRight: ({ tintColor }) => (
           <IconButton
             icon="exit"
@@ -312,7 +372,7 @@ function ProfileOverview() {
               >
                 <Ionicons name="save" size={28} color={"#faf2c4"} />
               </Pressable>
-              {/* ✨ LOGOUT BUTTON */}
+              {/*  LOGOUT BUTTON */}
               <IconButton
                 icon="exit"
                 size={24}
@@ -357,7 +417,7 @@ function PartiesOverview() {
             onPress={() => navigation.getParent()?.openDrawer()}
           />
         ),
-        // ✨ LOGOUT BUTTON IN HEADER
+        //  LOGOUT BUTTON IN HEADER
         headerRight: ({ tintColor }) => (
           <IconButton
             icon="exit"
@@ -395,7 +455,7 @@ function PartiesOverview() {
 }
 
 // ============================================
-// ✨ UPDATED: DRAWER NAVIGATOR (Main Menu)
+//  UPDATED: DRAWER NAVIGATOR (Main Menu)
 // ============================================
 function DrawerNavig(){
   const authCtx = useContext(AuthContext);
@@ -419,7 +479,7 @@ function DrawerNavig(){
         drawerInactiveTintColor: 'white',
         drawerActiveTintColor: GlobalStyles.colors.primary500,
         drawerActiveBackgroundColor: GlobalStyles.colors.accent500,
-        // ✨ LOGOUT BUTTON IN ALL DRAWER SCREENS
+        //  LOGOUT BUTTON IN ALL DRAWER SCREENS
         headerRight: ({ tintColor }) => (
           <IconButton
             icon="exit"
@@ -430,7 +490,7 @@ function DrawerNavig(){
         ),
       }}
     >
-      {/* ✨ NEW: Investment Events - Main Feature */}
+      {/*  NEW: Investment Events - Main Feature */}
       <Drawer.Screen 
         name="InvestmentEvents" 
         component={InvestmentEventsOverview}
@@ -442,7 +502,18 @@ function DrawerNavig(){
           headerShown: false, // InvestmentEventsOverview has its own header with logout
         }}
       />
-
+      {/*  NEW: Add Friend - Main Feature */}
+      <Drawer.Screen 
+        name="AddFriends" 
+        component={AddFriendsOverview}
+        options={{
+          title: '💰 Add Friends',
+          drawerIcon: ({ focused, size, color }) => (
+            <Ionicons name="gift" size={size} color={color} />
+          ),
+          headerShown: false, // AddFriendsOverview has its own header with logout
+        }}
+      />
       {/* Home Screen */}
       <Drawer.Screen 
         name="HomeScreen" 
@@ -509,7 +580,7 @@ function DrawerNavig(){
 }
 
 // ============================================
-// ✨ UPDATED: AUTHENTICATED STACK (After Login)
+//  UPDATED: AUTHENTICATED STACK (After Login)
 // ============================================
 function AuthenticatedStack() {
   const authCtx = useContext(AuthContext);
@@ -529,7 +600,7 @@ function AuthenticatedStack() {
         headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
         headerTintColor: 'white',
         contentStyle: { backgroundColor: GlobalStyles.colors.gray50 },
-        // ✨ DEFAULT LOGOUT BUTTON FOR ALL STACK SCREENS
+        //  DEFAULT LOGOUT BUTTON FOR ALL STACK SCREENS
         headerRight: ({ tintColor }) => (
           <IconButton
             icon="exit"
@@ -550,7 +621,7 @@ function AuthenticatedStack() {
       />
 
       {/* ============================================ */}
-      {/* ✨ NEW: INVESTMENT EVENT SCREENS */}
+      {/*  NEW: INVESTMENT EVENT SCREENS */}
       {/* ============================================ */}
       
       {/* Event Details */}
@@ -580,6 +651,17 @@ function AuthenticatedStack() {
         options={{
           title: 'Contribute',
           presentation: 'card',
+        }}
+      />
+
+      {/* User Search Screen */}
+      <Stack.Screen 
+        name="UserSearch" 
+        component={UserSearchScreen}
+        options={{
+          title: 'Search Users',
+          tabBarStyle: { display: 'none' },
+          headerShown: false,
         }}
       />
 
@@ -633,7 +715,7 @@ function AuthenticatedStack() {
                 color={tintColor}
                 onPress={() => navigation.navigate('ListScreen')}
               />
-              {/* ✨ LOGOUT BUTTON */}
+              {/*  LOGOUT BUTTON */}
               <IconButton
                 icon="exit"
                 size={24}
@@ -667,7 +749,7 @@ function AuthenticatedStack() {
                 color={tintColor}
                 onPress={() => navigation.navigate('AllFriends')}
               />
-              {/* ✨ LOGOUT BUTTON */}
+              {/*  LOGOUT BUTTON */}
               <IconButton
                 icon="exit"
                 size={24}

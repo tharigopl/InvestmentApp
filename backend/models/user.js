@@ -99,6 +99,12 @@ const userSchema = new Schema({
     ref: 'User' 
   }],
   
+  // External contacts (people without accounts)
+  externalContacts: [{
+    type: mongoose.Types.ObjectId,
+    ref: 'Contact'
+  }],
+  
   // Events (cached for quick access)
   eventsCreated: [{ 
     type: mongoose.Types.ObjectId, 
@@ -250,7 +256,9 @@ userSchema.virtual('fullName').get(function() {
 
 // Virtual for initials
 userSchema.virtual('initials').get(function() {
-  return `${this.fname.charAt(0)}${this.lname.charAt(0)}`.toUpperCase();
+  const first = this.fname?.charAt(0) || '';
+  const last = this.lname?.charAt(0) || '';
+  return `${first}${last}`.toUpperCase() || '?';
 });
 
 
@@ -329,8 +337,10 @@ userSchema.set('toJSON', {
     delete ret.password;
     delete ret.twoFactorSecret;
     delete ret.emailVerificationToken;
-    delete ret.taxInfo.ssn;
-    delete ret.taxInfo.ein;
+    if (ret.taxInfo) {
+      delete ret.taxInfo.ssn;
+      delete ret.taxInfo.ein;
+    }
     delete ret.__v;
     return ret;
   }

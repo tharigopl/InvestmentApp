@@ -2,7 +2,7 @@
 import axios from 'axios';
 import apiClient, { setAuthToken } from './api-client';
 
-const API_KEY = 'AIzaSyDK6dLf66nFmxkJb58V5YMaZwvQYigadOU';
+const API_KEY = '';
 
 /**
  * Firebase authentication (legacy - still uses firebase)
@@ -12,7 +12,7 @@ const API_KEY = 'AIzaSyDK6dLf66nFmxkJb58V5YMaZwvQYigadOU';
  * @returns {Promise<string>} Firebase token
  */
 async function authenticate(mode, email, password) {
-  const url = `https://identitytoolkit.googleapis.com/v1/accounts:${mode}?key=${API_KEY}`;
+  //const url = `https://identitytoolkit.googleapis.com/v1/accounts:${mode}?key=${API_KEY}`;
 
   const response = await axios.post(url, {
     email: email,

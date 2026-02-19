@@ -218,23 +218,33 @@ const createEvent = async (req, res, next) => {
       );
     }
 
+    console.log('✅ Step 1: Required fields validated');
+
     // Validate recipient exists
+    console.log('🔍 Step 2: Looking for recipient user:', recipientUserId);
     const recipient = await User.findById(recipientUserId);
     if (!recipient) {
+      console.log('❌ Recipient user not found in database');
       return next(new HttpError('Recipient user not found', 404));
     }
+    console.log('✅ Step 2: Recipient user found:', recipient.email);
 
     // Validate creator exists
+    console.log('🔍 Step 3: Looking for creator user:', userId);
     const creator = await User.findById(userId);
     if (!creator) {
+      console.log('❌ Creator user not found in database');
       return next(new HttpError('Creator user not found', 404));
     }
+    console.log('✅ Step 3: Creator user found:', creator.email);
 
     // Validate and enrich stock investments
     let enrichedInvestments = [];
+    console.log('📊 Step 4: Processing', selectedInvestments?.length || 0, 'investments');
     if (selectedInvestments && selectedInvestments.length > 0) {
       for (let investment of selectedInvestments) {
         try {
+          console.log('  🔍 Fetching stock data for:', investment.symbol);
           // Get stock info
           const stockInfo = await stockService.getStockInfo(investment.symbol);
           const quote = await stockService.getStockQuote(investment.symbol);
@@ -249,11 +259,13 @@ const createEvent = async (req, res, next) => {
               ? stockService.calculateShares(investment.allocatedAmount, quote.price)
               : 0,
           });
+          console.log('  ✅ Enriched:', investment.symbol);
         } catch (error) {
           logger.warn('Failed to enrich stock data', {
             symbol: investment.symbol,
             error: error.message,
           });
+          console.log('  ⚠️ Using basic data for:', investment.symbol);
           // Continue with basic info
           enrichedInvestments.push({
             symbol: investment.symbol,
@@ -264,9 +276,11 @@ const createEvent = async (req, res, next) => {
         }
       }
     }
+    console.log('✅ Step 4: Investments processed');
 
     // Create event
-    const event = new InvestmentEvent({
+    console.log('📝 Step 5: Creating event object');
+    const eventData = {
       eventType,
       recipientUser: recipientUserId,
       createdBy: userId,
@@ -279,16 +293,32 @@ const createEvent = async (req, res, next) => {
       selectedInvestments: enrichedInvestments,
       invitedUsers: invitedUsers || [],
       privacyLevel: privacyLevel || 'friends',
-      status: 'active', // Start as active
+      status: 'active',
       currentAmount: 0,
       contributors: [],
-    });
+    };
+    console.log('✅ Step 5: Event object created');
 
+    console.log('💾 Step 6: Creating mongoose document');
+    const event = new InvestmentEvent(eventData);
+    console.log('✅ Step 6: Mongoose document created');
+
+    console.log('💾 Step 7: Saving to database...');
     await event.save();
+    console.log('✅ Step 7: Event saved to database');
 
     // Populate references before returning
-    await event.populate('recipientUser', 'fname lname email image');
-    await event.populate('createdBy', 'fname lname email');
+    console.log('🔗 Step 8: Populating references...');
+    try {
+      await event.populate('recipientUser', 'fname lname email image');
+      console.log('  ✅ Populated recipientUser');
+      await event.populate('createdBy', 'fname lname email');
+      console.log('  ✅ Populated createdBy');
+    } catch (populateError) {
+      console.log('  ⚠️ Populate failed (non-critical):', populateError.message);
+      // Continue without populated fields
+    }
+    console.log('✅ Step 8: Populate complete');
 
     const duration = Date.now() - startTime;
     logger.info('createEvent - SUCCESS', {
@@ -296,6 +326,8 @@ const createEvent = async (req, res, next) => {
       eventTitle: event.eventTitle,
       duration: `${duration}ms`,
     });
+
+    console.log('✅ SUCCESS: Event created with ID:', event._id);
 
     res.status(201).json({
       event,

@@ -10,6 +10,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -73,7 +74,7 @@ const EventTypeStep = ({ selected, onSelect, onNext }) => {
 
 /**
  * Step 2: Event Details & Recipient
- * ✨ FIXED: Web-compatible date picker
+ *  FIXED: Web-compatible date picker
  */
 const RecipientStep = ({ data, onChange, onNext, onBack }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -85,7 +86,7 @@ const RecipientStep = ({ data, onChange, onNext, onBack }) => {
     }
   };
 
-  // ✨ FIX: Web-compatible date input
+  //  FIX: Web-compatible date input
   const handleWebDateChange = (event) => {
     const dateValue = event.target.value;
     if (dateValue) {
@@ -115,12 +116,12 @@ const RecipientStep = ({ data, onChange, onNext, onBack }) => {
           />
         </View>
 
-        {/* Event Date - ✨ FIXED: Web-compatible */}
+        {/* Event Date -  FIXED: Web-compatible */}
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Event Date</Text>
           
           {Platform.OS === 'web' ? (
-            // ✨ WEB: Use HTML5 date input
+            //  WEB: Use HTML5 date input
             <input
               type="date"
               value={data.eventDate.toISOString().split('T')[0]}
@@ -139,7 +140,7 @@ const RecipientStep = ({ data, onChange, onNext, onBack }) => {
               }}
             />
           ) : (
-            // ✨ MOBILE: Use native date picker
+            //  MOBILE: Use native date picker
             <>
               <TouchableOpacity
                 style={styles.dateButton}
@@ -274,18 +275,28 @@ const InviteContributorsStep = ({ data, onChange, onCreate, onBack }) => {
   const [isCreating, setIsCreating] = useState(false);
 
   const handleCreate = async () => {
+    console.log("🟢 Create Event button clicked!");
+    console.log("Event data:", data);
     setIsCreating(true);
     try {
       await onCreate();
+      setIsCreating(false);  
     } catch (error) {
       setIsCreating(false);
       console.error('Create error handled in step:', error);
     }
   };
 
+  // ✅ DEBUG: Log when component renders
+  console.log("📍 Step 4 (InviteContributorsStep) rendered");
+
   return (
     <View style={styles.stepContainer}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      {/* Scrollable content */}
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 20 }}
+      >
         <Text style={styles.stepTitle}>Invite Contributors</Text>
         <Text style={styles.stepSubtitle}>
           Choose friends who can contribute to this investment gift
@@ -332,32 +343,45 @@ const InviteContributorsStep = ({ data, onChange, onCreate, onBack }) => {
             <Text style={styles.summaryValue}>{data.invitedUsers.length} friends</Text>
           </View>
         </View>
-
-        {/* Buttons */}
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.backButton} onPress={onBack} disabled={isCreating}>
-            <Ionicons name="arrow-back" size={20} color={GlobalStyles.colors.gray700} />
-            <Text style={styles.backButtonText}>Back</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.createButton, isCreating && styles.createButtonDisabled]}
-            onPress={handleCreate}
-            disabled={isCreating}
-          >
-            {isCreating ? (
-              <>
-                <Text style={styles.createButtonText}>Creating...</Text>
-              </>
-            ) : (
-              <>
-                <Text style={styles.createButtonText}>Create Event</Text>
-                <Ionicons name="checkmark" size={20} color="#fff" />
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
       </ScrollView>
+
+      {/* ✅ FIXED: Sticky bottom bar - always visible */}
+      <View style={[styles.stickyBottomBar, { zIndex: 999 }]}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => {
+            console.log("⬅️ Back button clicked");
+            onBack();
+          }}
+          disabled={isCreating}
+        >
+          <Ionicons name="arrow-back" size={20} color={GlobalStyles.colors.gray700} />
+          <Text style={styles.backButtonText}>Back</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.createButton, isCreating && styles.createButtonDisabled]}
+          onPress={() => {
+            console.log("✅ Create Event button clicked (from TouchableOpacity)");
+            handleCreate();
+          }}
+          disabled={isCreating}
+        >
+          {isCreating ? (
+            <>
+              <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.createButtonText}>Creating...</Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name="checkmark-circle" size={22} color="#fff" />
+              <Text style={styles.createButtonText}>
+                Create Event {data.invitedUsers.length > 0 && `(${data.invitedUsers.length} invited)`}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -379,24 +403,52 @@ export default function CreateInvestmentEvent({ navigation }) {
 
   const handleCreate = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      console.log('🟢 Creating event with data:', eventData);
       
-      // Prepare data for API
+      // ✅ FIXED: Use 'uid' key instead of 'userId'
+      const userId = await AsyncStorage.getItem('uid');
+      console.log('📋 User ID from AsyncStorage:', userId);
+      
+      if (!userId) {
+        Alert.alert('Error', 'User not logged in. Please log in again.');
+        throw new Error('User ID not found in AsyncStorage');
+      }
+      
+      // Calculate contribution deadline (7 days before event by default)
+      const contributionDeadline = new Date(eventData.eventDate);
+      contributionDeadline.setDate(contributionDeadline.getDate() - 7);
+      
+      // Prepare data for API - match backend field names exactly
       const apiData = {
         eventType: eventData.eventType,
-        title: eventData.eventTitle,
+        eventTitle: eventData.eventTitle,
+        recipientUserId: userId,
         eventDate: eventData.eventDate.toISOString(),
+        eventDescription: eventData.description || '',
         targetAmount: parseFloat(eventData.targetAmount),
-        description: eventData.description,
+        contributionDeadline: contributionDeadline.toISOString(),
         selectedInvestments: eventData.selectedInvestments.map(s => ({
           symbol: s.symbol,
           name: s.name,
           type: s.type,
         })),
-        invitedUserIds: eventData.invitedUsers.map(u => u.id || u._id),
+        invitedUsers: eventData.invitedUsers.map(u => u.id || u._id),
       };
 
-      await createEvent(token, apiData);
+      console.log('📤 Sending to API:', apiData);
+      console.log('📤 Field check:', {
+        hasEventType: !!apiData.eventType,
+        hasEventTitle: !!apiData.eventTitle,
+        hasRecipientUserId: !!apiData.recipientUserId,
+        hasEventDate: !!apiData.eventDate,
+        hasTargetAmount: !!apiData.targetAmount,
+        hasContributionDeadline: !!apiData.contributionDeadline,
+      });
+      
+      // ✅ FIXED: createEvent no longer needs token - apiClient handles auth
+      const result = await createEvent(apiData);
+      
+      console.log('✅ Event created successfully:', result);
       
       Alert.alert(
         'Success!',
@@ -404,10 +456,13 @@ export default function CreateInvestmentEvent({ navigation }) {
         [{ text: 'OK', onPress: () => navigation.navigate('EventFeed') }]
       );
     } catch (error) {
-      console.error('Create event error:', error);
+      console.error('❌ Create event error:', error);
+      console.error('Error message:', error.message);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
       Alert.alert(
         'Error',
-        error.message || 'Failed to create event. Please try again.'
+        error.response?.data?.message || error.message || 'Failed to create event. Please try again.'
       );
       throw error; // Re-throw so step component knows
     }
@@ -547,18 +602,19 @@ const styles = StyleSheet.create({
   },
   stepContainer: {
     flex: 1,
-    padding: 20,
   },
   stepTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: GlobalStyles.colors.gray800,
     marginBottom: 8,
+    paddingHorizontal: 20,
   },
   stepSubtitle: {
     fontSize: 16,
     color: GlobalStyles.colors.gray600,
     marginBottom: 24,
+    paddingHorizontal: 20,
   },
   eventTypesContainer: {
     marginBottom: 32,
@@ -603,7 +659,7 @@ const styles = StyleSheet.create({
     color: GlobalStyles.colors.gray800,
     borderWidth: 1,
     borderColor: 'transparent',
-    outlineStyle: 'none', // ✨ FIX: Remove web outline
+    outlineStyle: 'none', //  FIX: Remove web outline
   },
   textArea: {
     height: 100,
@@ -640,7 +696,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: GlobalStyles.colors.gray800,
-    outlineStyle: 'none', // ✨ FIX: Remove web outline
+    outlineStyle: 'none', //  FIX: Remove web outline
   },
   inputHint: {
     fontSize: 14,
@@ -734,11 +790,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
     backgroundColor: GlobalStyles.colors.success500,
     flex: 1,
+    gap: 8,
   },
   createButtonDisabled: {
     backgroundColor: GlobalStyles.colors.gray400,
@@ -747,6 +804,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#fff',
-    marginRight: 8,
+  },
+  // ✅ DEBUG VERSION: Sticky bottom bar with FORCED visibility
+  stickyBottomBar: {
+    position: 'absolute',        // ✅ Force to bottom
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#ff0000',  // ✅ RED - very obvious!
+    borderTopWidth: 4,
+    borderTopColor: '#000',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 999,
+    zIndex: 9999,
+    minHeight: 80,              // ✅ Force height
   },
 });

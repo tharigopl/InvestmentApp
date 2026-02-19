@@ -1307,7 +1307,7 @@ const createStAccount = async (req, res, next) => {
     let existingStripeUser;
     try {
       existingStripeUser = await StripeUser.findOne({
-        email: req.userData.userId.email,
+        email: req.userData.email,
       });
     } catch (err) {
       const error = new HttpError("Stripe User Not Found", 500);
@@ -1323,7 +1323,7 @@ const createStAccount = async (req, res, next) => {
     } else {
       try {
         console.log("CreaTE Stripe Account2");
-        stripeuserdata["email"] = req.userData.userId.email;
+        stripeuserdata["email"] = req.userData.email;
   
         if(userCountry == "US"){
           stripeuserdata["country"] = "US";

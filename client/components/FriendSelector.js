@@ -1,5 +1,5 @@
-// client/components/FriendSelector.js - FINAL FIX (Correct API + No focus loss)
-import React, { useState, useEffect, useMemo, useContext } from 'react';
+// client/components/FriendSelector.js - UPDATED for Users + Contacts
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,19 +13,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GlobalStyles } from '../constants/styles';
-import { getFriends } from '../util/friend';
-import { AuthContext } from '../store/auth-context';
+import { getAllFriends } from '../util/friend';
 
 /**
  * FriendSelector Component
- * Allows users to select friends to invite to an event
- * ✨ FIXED: 
- * - Uses correct API route /api/friends/user/:userid
- * - Gets userId from AuthContext
- * - Search input maintains focus
+ * Works with both registered users and external contacts
  */
 const FriendSelector = ({ selectedFriends = [], onFriendsChange, maxSelections = 50 }) => {
-  const authCtx = useContext(AuthContext);
   const [friends, setFriends] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,7 +29,7 @@ const FriendSelector = ({ selectedFriends = [], onFriendsChange, maxSelections =
     loadFriends();
   }, []);
 
-  // ✨ FIX: Memoize filtered friends to prevent re-renders
+  // Memoize filtered friends
   const filteredFriends = useMemo(() => {
     if (!searchQuery.trim()) {
       return friends;
@@ -43,11 +37,9 @@ const FriendSelector = ({ selectedFriends = [], onFriendsChange, maxSelections =
 
     const query = searchQuery.toLowerCase();
     return friends.filter(friend => {
-      const name = (friend.name || `${friend.firstname || ''} ${friend.lastname || ''}`).toLowerCase();
+      const name = (friend.name || '').toLowerCase();
       const email = (friend.email || '').toLowerCase();
-      const firstname = (friend.firstname || '').toLowerCase();
-      const lastname = (friend.lastname || '').toLowerCase();
-      return name.includes(query) || email.includes(query) || firstname.includes(query) || lastname.includes(query);
+      return name.includes(query) || email.includes(query);
     });
   }, [friends, searchQuery]);
 
@@ -56,35 +48,10 @@ const FriendSelector = ({ selectedFriends = [], onFriendsChange, maxSelections =
       setIsLoading(true);
       setError(null);
       
-      // ✨ FIX: Get userId from AuthContext instead of passing token
-      const userId = authCtx.uid;
+      const allFriends = await getAllFriends();
+      console.log('Loaded friends:', allFriends);
       
-      if (!userId) {
-        console.error('No user ID available');
-        setError('User not authenticated');
-        setFriends([]);
-        setIsLoading(false);
-        return;
-      }
-
-      console.log('Loading friends for user:', userId);
-      
-      // ✨ FIX: Use correct API route
-      const fetchedFriends = await getFriends(userId);
-      
-      console.log('Fetched friends:', fetchedFriends);
-      
-      // Format friends data consistently
-      const formattedFriends = fetchedFriends.map(friend => ({
-        id: friend.id || friend._id,
-        email: friend.email,
-        name: friend.name || (friend.firstname ? `${friend.firstname} ${friend.lastname}` : friend.email),
-        firstname: friend.firstname,
-        lastname: friend.lastname,
-        imageUrl: friend.imageUrl || friend.image,
-      }));
-      
-      setFriends(formattedFriends);
+      setFriends(allFriends);
     } catch (error) {
       console.error('Error loading friends:', error);
       setError(error.message || 'Failed to load friends');
@@ -98,10 +65,8 @@ const FriendSelector = ({ selectedFriends = [], onFriendsChange, maxSelections =
     const isSelected = selectedFriends.find(f => f.id === friend.id);
 
     if (isSelected) {
-      // Remove friend
       onFriendsChange(selectedFriends.filter(f => f.id !== friend.id));
     } else {
-      // Add friend (check max)
       if (selectedFriends.length >= maxSelections) {
         Alert.alert('Maximum Reached', `You can only invite up to ${maxSelections} friends`);
         return;
@@ -112,29 +77,27 @@ const FriendSelector = ({ selectedFriends = [], onFriendsChange, maxSelections =
 
   const handleSelectAll = () => {
     if (selectedFriends.length === filteredFriends.length) {
-      // Deselect all
       onFriendsChange([]);
     } else {
-      // Select all (up to max)
       const toSelect = filteredFriends.slice(0, maxSelections);
       onFriendsChange(toSelect);
     }
   };
 
-  // ✨ FIX: Memoize renderItem to prevent re-creation on every render
   const renderFriendItem = ({ item }) => {
     const isSelected = selectedFriends.find(f => f.id === item.id);
+    const isContact = item.type === 'contact';
 
     return (
       <TouchableOpacity
         style={[styles.friendItem, isSelected && styles.friendItemSelected]}
         onPress={() => handleToggleFriend(item)}
       >
-        {/* Friend Avatar */}
+        {/* Avatar */}
         <View style={styles.avatarContainer}>
-          {item.imageUrl ? (
+          {item.profileImage ? (
             <Image
-              source={{ uri: item.imageUrl }}
+              source={{ uri: item.profileImage }}
               style={styles.avatar}
             />
           ) : (
@@ -144,6 +107,15 @@ const FriendSelector = ({ selectedFriends = [], onFriendsChange, maxSelections =
               </Text>
             </View>
           )}
+          
+          {/* Type Badge */}
+          {isContact && (
+            <View style={styles.contactBadge}>
+              <Ionicons name="mail" size={10} color="#fff" />
+            </View>
+          )}
+          
+          {/* Selection Badge */}
           {isSelected && (
             <View style={styles.checkmark}>
               <Ionicons name="checkmark" size={16} color="#fff" />
@@ -159,6 +131,21 @@ const FriendSelector = ({ selectedFriends = [], onFriendsChange, maxSelections =
               {item.email}
             </Text>
           )}
+          {isContact && (
+            <View style={styles.contactLabel}>
+              <Ionicons 
+                name={item.invitedToJoin ? "mail" : "mail-outline"} 
+                size={12} 
+                color={item.invitedToJoin ? GlobalStyles.colors.success500 : GlobalStyles.colors.warning600} 
+              />
+              <Text style={[
+                styles.contactLabelText,
+                item.invitedToJoin && styles.contactLabelInvited
+              ]}>
+                {item.invitedToJoin ? 'Invited to join' : 'Contact (no account)'}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Selection Indicator */}
@@ -169,7 +156,6 @@ const FriendSelector = ({ selectedFriends = [], onFriendsChange, maxSelections =
     );
   };
 
-  // ✨ FIX: Extract keyExtractor to prevent re-creation
   const keyExtractor = (item) => item.id;
 
   if (isLoading) {
@@ -199,7 +185,7 @@ const FriendSelector = ({ selectedFriends = [], onFriendsChange, maxSelections =
         Invite Friends ({selectedFriends.length}/{maxSelections})
       </Text>
 
-      {/* ✨ FIXED: Search bar outside of FlatList to maintain focus */}
+      {/* Search bar */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color={GlobalStyles.colors.gray400} />
         <TextInput
@@ -232,7 +218,7 @@ const FriendSelector = ({ selectedFriends = [], onFriendsChange, maxSelections =
         )}
       </View>
 
-      {/* ✨ FIXED: FlatList with proper optimization */}
+      {/* Friends List */}
       {filteredFriends.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="people-outline" size={60} color={GlobalStyles.colors.gray300} />
@@ -378,6 +364,19 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: GlobalStyles.colors.primary700,
   },
+  contactBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: GlobalStyles.colors.warning500,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
   checkmark: {
     position: 'absolute',
     bottom: 0,
@@ -404,6 +403,20 @@ const styles = StyleSheet.create({
   friendEmail: {
     fontSize: 14,
     color: GlobalStyles.colors.gray500,
+  },
+  contactLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  contactLabelText: {
+    fontSize: 12,
+    color: GlobalStyles.colors.warning600,
+    fontWeight: '500',
+  },
+  contactLabelInvited: {
+    color: GlobalStyles.colors.success500,
   },
   checkbox: {
     width: 28,
