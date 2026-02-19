@@ -10,11 +10,12 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { GlobalStyles } from '../constants/styles';
-import { getEvents } from '../util/events';
+import { getMyEvents, deleteEvent } from '../util/events';
 
 const EventFeed = () => {
   const navigation = useNavigation();
@@ -23,17 +24,29 @@ const EventFeed = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [filter, setFilter] = useState('all'); // all, active, funded, completed
 
+  // Load events when filter changes
   useEffect(() => {
     loadEvents();
   }, [filter]);
 
+  // ✅ NEW: Reload events when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔄 EventFeed focused - reloading events...');
+      loadEvents();
+    }, [filter])
+  );
+
   const loadEvents = async () => {
     try {
+      console.log('📡 Fetching events from API...');
       setIsLoading(true);
-      const fetchedEvents = await getEvents({ status: filter === 'all' ? null : filter });
+      // Use getMyEvents to get events created by current user
+      const fetchedEvents = await getMyEvents();
+      console.log('✅ Events loaded:', fetchedEvents?.length || 0);
       setEvents(fetchedEvents);
     } catch (error) {
-      console.error('Error loading events:', error);
+      console.error('❌ Error loading events:', error);
       Alert.alert('Error', 'Failed to load events. Please try again.');
     } finally {
       setIsLoading(false);
@@ -54,6 +67,64 @@ const EventFeed = () => {
     navigation.navigate('CreateInvestmentEvent');
   };
 
+  const handleDelete = async (eventId, eventTitle) => {
+    console.log('🗑️ handleDelete called with:', eventId, eventTitle);
+    
+    // Web-compatible confirmation
+    const confirmDelete = async () => {
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.confirm) {
+        return window.confirm(`Delete "${eventTitle}"?\n\nThis action cannot be undone.`);
+      } else {
+        // Mobile - use Alert with Promise
+        return new Promise((resolve) => {
+          Alert.alert(
+            'Delete Event',
+            `Are you sure you want to delete "${eventTitle}"?\n\nThis action cannot be undone.`,
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Delete', style: 'destructive', onPress: () => resolve(true) }
+            ]
+          );
+        });
+      }
+    };
+
+    const confirmed = await confirmDelete();
+    console.log('🗑️ User confirmed:', confirmed);
+    
+    if (!confirmed) {
+      console.log('❌ User cancelled delete');
+      return;
+    }
+
+    try {
+      console.log('🗑️ Calling delete API...');
+      await deleteEvent(eventId);
+      console.log('✅ Delete API successful');
+      
+      // Remove from local state
+      setEvents(prev => prev.filter(e => e._id !== eventId && e.id !== eventId));
+      
+      // Show success message
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        // Web - non-blocking alert
+        setTimeout(() => {
+          //alert('Event deleted successfully');
+        }, 100);
+      } else {
+        //Alert.alert('Success', 'Event deleted successfully');
+      }
+    } catch (error) {
+      console.error('❌ Delete error:', error);
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        alert('Failed to delete event. Please try again.');
+      } else {
+        Alert.alert('Error', 'Failed to delete event');
+      }
+      loadEvents(); // Reload to sync
+    }
+  };
+
   const renderEventCard = ({ item }) => {
     const progress = (item.currentAmount / item.targetAmount) * 100;
     const daysLeft = item.deadline
@@ -61,32 +132,33 @@ const EventFeed = () => {
       : null;
 
     return (
-      <TouchableOpacity
-        style={styles.eventCard}
-        onPress={() => handleEventPress(item._id || item.id)}
-        activeOpacity={0.7}
-      >
-        {/* Event Image */}
-        <Image
-          source={
-            item.recipientImage || item.imageUrl
-              ? { uri: item.recipientImage || item.imageUrl }
-              : { uri: 'https://via.placeholder.com/400x200?text=Event' }
-          }
-          style={styles.eventImage}
-        />
+      <View style={styles.eventCard}>
+        <TouchableOpacity
+          style={styles.cardTouchable}
+          onPress={() => handleEventPress(item._id || item.id)}
+          activeOpacity={0.7}
+        >
+          {/* Event Image */}
+          <Image
+            source={
+              item.recipientImage || item.imageUrl
+                ? { uri: item.recipientImage || item.imageUrl }
+                : { uri: 'https://via.placeholder.com/400x200?text=Event' }
+            }
+            style={styles.eventImage}
+          />
 
-        {/* Status Badge */}
-        <View style={[styles.statusBadge, styles[`status${item.status}`]]}>
-          <Text style={styles.statusText}>
-            {item.status === 'active' && '🔥 Active'}
-            {item.status === 'funded' && '✅ Funded'}
-            {item.status === 'awaiting_investment' && '⏳ Ready'}
-            {item.status === 'invested' && '💰 Invested'}
-            {item.status === 'completed' && '🎉 Complete'}
-            {item.status === 'cancelled' && '❌ Cancelled'}
-          </Text>
-        </View>
+          {/* Status Badge */}
+          <View style={[styles.statusBadge, styles[`status${item.status}`]]}>
+            <Text style={styles.statusText}>
+              {item.status === 'active' && '🔥 Active'}
+              {item.status === 'funded' && '✅ Funded'}
+              {item.status === 'awaiting_investment' && '⏳ Ready'}
+              {item.status === 'invested' && '💰 Invested'}
+              {item.status === 'completed' && '🎉 Complete'}
+              {item.status === 'cancelled' && '❌ Cancelled'}
+            </Text>
+          </View>
 
         {/* Event Content */}
         <View style={styles.eventContent}>
@@ -167,8 +239,7 @@ const EventFeed = () => {
           {item.status === 'active' && (
             <TouchableOpacity
               style={styles.contributeButton}
-              onPress={(e) => {
-                e.stopPropagation();
+              onPress={() => {
                 navigation.navigate('ContributionScreen', { eventId: item._id || item.id });
               }}
             >
@@ -177,7 +248,20 @@ const EventFeed = () => {
             </TouchableOpacity>
           )}
         </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+
+        {/* Delete Button - Outside TouchableOpacity so it's independently clickable */}
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => {
+            console.log('🗑️ Delete button pressed for event:', item._id || item.id);
+            handleDelete(item._id || item.id, item.eventTitle || item.title);
+          }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="trash-outline" size={20} color="#fff" />
+        </TouchableOpacity>
+      </View>
     );
   };
 
@@ -317,6 +401,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   eventCard: {
+    position: 'relative',
     backgroundColor: '#fff',
     borderRadius: 12,
     marginHorizontal: 16,
@@ -327,6 +412,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+  },
+  cardTouchable: {
+    flex: 1,
+    zIndex: 1,
   },
   eventImage: {
     width: '100%',
@@ -340,6 +429,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
+  },
+  deleteButton: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    backgroundColor: 'rgba(239, 68, 68, 0.9)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 999,
   },
   statusactive: {
     backgroundColor: GlobalStyles.colors.primary500,

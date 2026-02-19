@@ -280,7 +280,8 @@ const InviteContributorsStep = ({ data, onChange, onCreate, onBack }) => {
     setIsCreating(true);
     try {
       await onCreate();
-      setIsCreating(false);  
+      // ✅ Success - onCreate navigates away, but reset state just in case
+      setIsCreating(false);
     } catch (error) {
       setIsCreating(false);
       console.error('Create error handled in step:', error);
@@ -450,23 +451,17 @@ export default function CreateInvestmentEvent({ navigation }) {
       
       console.log('✅ Event created successfully:', result);
       
-      // ✅ Navigate immediately (no waiting for Alert button)
-      try {
-        //navigation.navigate('HomeScreen');
-        // Resets navigation stack to fresh Home screen
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Home' }],
-        });
-      } catch (navError) {
-        console.log('Home not found, trying to go back');
-        navigation.goBack();
-      }
-
-      // Show success message AFTER navigation
+      // ✅ Go back - HomeScreen will reload via useEffect when it comes into focus
+      navigation.goBack();
+      
+      // Show success message after navigation
       setTimeout(() => {
-        Alert.alert('Success!', 'Your investment event has been created successfully.');
+        Alert.alert(
+          'Success!',
+          'Your investment event has been created successfully.'
+        );
       }, 500);
+      
     } catch (error) {
       console.error('❌ Create event error:', error);
       console.error('Error message:', error.message);
@@ -814,10 +809,10 @@ const styles = StyleSheet.create({
   },
   createButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: '600',
+    color: GlobalStyles.colors.gray700,
   },
-  // ✅ DEBUG VERSION: Sticky bottom bar with FORCED visibility
+  // ✅ NEW: Sticky bottom bar for Step 4 buttons
   stickyBottomBar: {
     position: 'absolute',        // ✅ Force to bottom
     bottom: 0,
@@ -828,11 +823,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#ff0000',  // ✅ RED - very obvious!
-    borderTopWidth: 4,
+    backgroundColor: '#fff',  // ✅ RED - very obvious!
+    borderTopWidth: 0,
     borderTopColor: '#000',
     gap: 12,
-    shadowColor: '#000',
+    shadowColor: '#fff',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,

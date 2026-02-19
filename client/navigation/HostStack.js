@@ -15,9 +15,9 @@ export default function HostStack() {
         headerShown: false,
       }}
     >
-      <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="CreateEvent" component={CreateEventScreen} />
-      <Stack.Screen name="EventCreated" component={EventCreatedScreen} />
+      //<Stack.Screen name="Home" component={HomeScreen} />
+      //<Stack.Screen name="CreateEvent" component={CreateEventScreen} />
+      //<Stack.Screen name="EventCreated" component={EventCreatedScreen} />
       <Stack.Screen name="CreateEvent" component={CreateInvestmentEvent} />
     </Stack.Navigator>
   );
