@@ -23,7 +23,7 @@ export async function createContribution(contributionData) {
  */
 export async function confirmContribution(paymentIntentId) {
   try {
-    const response = await apiClient.post('/stripe/confirm-payment', { paymentIntentId });
+    const response = await apiClient.post('/stripe/confirm-contribution', { paymentIntentId });
     return response.data;
   } catch (error) {
     console.error('Confirm contribution error:', error.message);

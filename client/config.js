@@ -4,7 +4,7 @@
 const ENV = {
     development: {
       API_URL: 'http://localhost:5000/api',
-      STRIPE_PUBLISHABLE_KEY: 'pk_test_xxxxxxxxxxxxxxxxxxxxx',
+      STRIPE_PUBLISHABLE_KEY: 'pk_test_51NLhI0FQAGzTwM7MLqh8Ye1ctt2a39svtyXB7yCTcgq5TqfW5NUJpPRSMugOxzuFPFsI3VFUqNye37ntZYXPLFsq00yPWoMwlU',
       WS_URL: 'http://localhost:5000',
     },
     staging: {

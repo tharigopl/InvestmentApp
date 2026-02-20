@@ -1,4 +1,4 @@
-// client/screens/ContributionScreen.js
+// client/screens/ContributionScreen.js - CROSS-PLATFORM
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -13,10 +13,13 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
 import { GlobalStyles } from '../constants/styles';
 import { getEventById } from '../util/events';
+import PaymentForm from '../components/PaymentForm'; // Auto-selects .web or .native
 import {
   createContribution,
+  confirmContribution,
   calculateFees,
   validateContributionAmount,
 } from '../util/contributions';
@@ -27,9 +30,15 @@ const ContributionScreen = ({ route, navigation }) => {
   const [event, setEvent] = useState(null);
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
+  const [cardComplete, setCardComplete] = useState(false);
+  const [cardError, setCardError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
+
+  // Web-only Stripe hooks (only used on web)
+  const stripe = Platform.OS === 'web' ? useStripe() : null;
+  const elements = Platform.OS === 'web' ? useElements() : null;
 
   useEffect(() => {
     loadEvent();
@@ -80,14 +89,25 @@ const ContributionScreen = ({ route, navigation }) => {
       return;
     }
 
+    // Validate card
+    if (!cardComplete) {
+      Alert.alert('Card Required', 'Please enter your card details');
+      return;
+    }
+
+    if (cardError) {
+      Alert.alert('Card Error', cardError.message || 'Invalid card details');
+      return;
+    }
+
     const contributionAmount = parseFloat(amount);
     const remaining = event.targetAmount - event.currentAmount;
 
-    // Check if contribution exceeds remaining amount
+    // Check if contribution exceeds remaining
     if (contributionAmount > remaining) {
       Alert.alert(
         'Amount Too High',
-        `This event only needs $${remaining.toFixed(2)} more to reach its goal. Would you like to contribute that amount instead?`,
+        `This event only needs $${remaining.toFixed(2)} more to reach its goal.`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -105,8 +125,7 @@ const ContributionScreen = ({ route, navigation }) => {
     setIsProcessing(true);
 
     try {
-      // In a real app, you would integrate with Stripe here
-      // For now, we'll simulate the payment process
+      console.log('💳 Starting payment...');
       
       const contributionData = {
         eventId: event._id || event.id,
@@ -114,33 +133,62 @@ const ContributionScreen = ({ route, navigation }) => {
         message: message.trim(),
       };
 
-      // Create payment intent
+      // Step 1: Create payment intent
+      console.log('📡 Creating payment intent...');
       const paymentResult = await createContribution(contributionData);
+      console.log('✅ Payment intent created');
 
-      // TODO: Integrate with Stripe SDK to handle payment
-      // const { clientSecret } = paymentResult;
-      // Handle Stripe payment confirmation here
+      const { clientSecret, paymentIntentId } = paymentResult;
+
+      // Step 2: Confirm payment (platform-specific)
+      console.log('💳 Confirming payment...');
+      let paymentIntent;
       
-      // For now, show success
+      if (Platform.OS === 'web') {
+        // Web: Use Stripe.js
+        if (!stripe || !elements) {
+          throw new Error('Stripe not loaded');
+        }
+        
+        const cardElement = elements.getElement(CardElement);
+        const { error, paymentIntent: pi } = await stripe.confirmCardPayment(clientSecret, {
+          payment_method: { card: cardElement },
+        });
+
+        if (error) {
+          throw new Error(error.message);
+        }
+        paymentIntent = pi;
+      } else {
+        // Mobile: Native Stripe SDK handled by PaymentForm component
+        // For mobile, we would use confirmPayment from @stripe/stripe-react-native
+        // But since we're testing on web, this won't execute
+        throw new Error('Mobile payment not implemented in this version');
+      }
+
+      console.log('✅ Payment confirmed');
+
+      // Step 3: Notify backend
+      console.log('📡 Notifying backend...');
+      await confirmContribution(paymentIntentId);
+      console.log('✅ Backend updated');
+
+      // Step 4: Update local state
+      const updatedEvent = {
+        ...event,
+        currentAmount: event.currentAmount + contributionAmount,
+      };
+      setEvent(updatedEvent);
+
+      // Show success
       Alert.alert(
-        'Success!',
-        'Your contribution has been processed successfully.',
-        [
-          {
-            text: 'View Event',
-            onPress: () => {
-              navigation.goBack();
-              // Optionally refresh the event details
-            },
-          },
-        ]
+        '🎉 Success!',
+        `Your $${contributionAmount.toFixed(2)} contribution has been processed!\n\nEvent: $${updatedEvent.currentAmount.toFixed(2)} / $${updatedEvent.targetAmount.toFixed(2)}`,
+        [{ text: 'View Event', onPress: () => navigation.goBack() }]
       );
     } catch (err) {
-      console.error('Contribution error:', err);
-      Alert.alert(
-        'Payment Failed',
-        err.message || 'Failed to process your contribution. Please try again.'
-      );
+      console.error('❌ Payment error:', err);
+      Alert.alert('Payment Failed', err.message || 'Failed to process payment');
     } finally {
       setIsProcessing(false);
     }
@@ -284,6 +332,17 @@ const ContributionScreen = ({ route, navigation }) => {
           <Text style={styles.characterCount}>{message.length}/500</Text>
         </View>
 
+        {/* Card Details */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>💳 Card Details</Text>
+          <PaymentForm
+            onCardChange={(details) => {
+              setCardComplete(details.complete);
+              setCardError(details.error);
+            }}
+          />
+        </View>
+
         {/* Payment Info */}
         <View style={styles.infoBox}>
           <Ionicons name="lock-closed" size={24} color={GlobalStyles.colors.primary600} />
@@ -299,10 +358,10 @@ const ContributionScreen = ({ route, navigation }) => {
         <TouchableOpacity
           style={[
             styles.submitButton,
-            (!amount || parseFloat(amount) <= 0 || isProcessing) && styles.submitButtonDisabled,
+            (!amount || parseFloat(amount) <= 0 || !cardComplete || isProcessing) && styles.submitButtonDisabled,
           ]}
           onPress={handleSubmit}
-          disabled={!amount || parseFloat(amount) <= 0 || isProcessing}
+          disabled={!amount || parseFloat(amount) <= 0 || !cardComplete || isProcessing}
         >
           {isProcessing ? (
             <>

@@ -49,10 +49,21 @@ import IconButton from './components/ui/IconButton';
 import { Colors } from './constants/styles';
 import { GlobalStyles } from './constants/styles';
 import AddFriendScreen from './screens/AddFriendScreen';
+import config from './config';
+
+
+//Stripe
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 const BottomTabs = createBottomTabNavigator();
+
+
+const STRIPE_PUBLISHABLE_KEY = config.STRIPE_PUBLISHABLE_KEY;
+const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
+
 
 // ============================================
 // AUTH STACK (Login/Signup)
@@ -79,7 +90,7 @@ function InvestmentEventsOverview() {
   const authCtx = useContext(AuthContext);
   const userCtx = useContext(UserContext);
   const stripeCtx = useContext(StripeContext);
-
+  console.log("Configs ", config.STRIPE_PUBLISHABLE_KEY);
   function logout(){
     console.log("Logging out...");
     authCtx.logout();
@@ -859,6 +870,7 @@ function Root() {
 export default function App() {
   return (
     <>
+    <Elements stripe={stripePromise}>
       <StatusBar style="light" />
       <AuthContextProvider>
         <UsersContextProvider>
@@ -869,6 +881,7 @@ export default function App() {
           </StripeContextProvider>
         </UsersContextProvider>
       </AuthContextProvider>
+      </Elements>
     </>
   );
 }

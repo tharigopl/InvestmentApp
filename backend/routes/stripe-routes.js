@@ -56,6 +56,7 @@ router.post('/create-connected-account', checkAuth, stripeController.createConne
 router.get('/account-status/:accountId', checkAuth, stripeController.getAccountStatus);
 router.post('/refresh-account-link', checkAuth, stripeController.refreshAccountLink);
 router.post('/create-payment-intent', checkAuth, stripeController.createPaymentIntent);
+router.post('/confirm-payment', checkAuth, stripeController.confirmPayment);
 
 // Contribution routes (for contributors)
 router.post('/create-contribution', checkAuth, contributionController.createContribution);

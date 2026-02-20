@@ -14,7 +14,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { GlobalStyles } from '../constants/styles';
 import { getEventById, cancelEvent } from '../util/events';
-import { getEventContributions } from '../util/contributions';
 
 const EventDetails = ({ route, navigation }) => {
   const { eventId } = route.params;
@@ -32,15 +31,15 @@ const EventDetails = ({ route, navigation }) => {
   const loadEventDetails = async () => {
     try {
       setError(null);
-      const [eventData, contributionsData] = await Promise.all([
-        getEventById(eventId),
-        getEventContributions(eventId),
-      ]);
+      console.log('📡 Fetching event details for:', eventId);
+      const eventData = await getEventById(eventId);
+      console.log('✅ Event data loaded:', eventData);
       
       setEvent(eventData);
-      setContributions(contributionsData);
+      // ✅ Use contributors from event data instead of separate API call
+      setContributions(eventData.contributors || []);
     } catch (err) {
-      console.error('Error loading event details:', err);
+      console.error('❌ Error loading event details:', err);
       setError(err.message || 'Failed to load event details');
     } finally {
       setIsLoading(false);
@@ -265,30 +264,46 @@ const EventDetails = ({ route, navigation }) => {
             <Text style={styles.sectionTitle}>
               Contributors ({contributions.length})
             </Text>
-            {contributions.map((contribution, index) => (
-              <View key={index} style={styles.contributorCard}>
-                <View style={styles.contributorAvatar}>
-                  <Text style={styles.contributorInitial}>
-                    {contribution.contributorName?.[0]?.toUpperCase() || '?'}
-                  </Text>
-                </View>
-                <View style={styles.contributorInfo}>
-                  <Text style={styles.contributorName}>
-                    {contribution.contributorName || 'Anonymous'}
-                  </Text>
-                  <Text style={styles.contributionDate}>
-                    {new Date(contribution.createdAt).toLocaleDateString()}
-                  </Text>
-                </View>
-                <Text style={styles.contributionAmount}>
-                  ${contribution.amount?.toFixed(2) || '0.00'}
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
+            {contributions.map((contribution, index) => {
+              // Get contributor name from populated user data
+              const contributorName = contribution.isAnonymous 
+                ? 'Anonymous'
+                : contribution.user 
+                  ? `${contribution.user.fname || ''} ${contribution.user.lname || ''}`.trim()
+                  : 'Anonymous';
+              
+              const contributorInitial = contribution.isAnonymous || !contribution.user
+                ? '?'
+                : (contribution.user.fname?.[0] || contribution.user.lname?.[0] || '?').toUpperCase();
 
-        {/* Action Buttons */}
+              return (
+                <View key={index} style={styles.contributorCard}>
+                  <View style={styles.contributorAvatar}>
+                    <Text style={styles.contributorInitial}>
+                      {contributorInitial}
+                    </Text>
+                  </View>
+                  <View style={styles.contributorInfo}>
+                    <Text style={styles.contributorName}>
+                      {contributorName}
+                    </Text>
+                    <Text style={styles.contributionDate}>
+                      {new Date(contribution.contributedAt || contribution.createdAt).toLocaleDateString()}
+                    </Text>
+                    {contribution.message && (
+                      <Text style={styles.contributionMessage}>
+                        "{contribution.message}"
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={styles.contributionAmount}>
+                    ${contribution.amount?.toFixed(2) || '0.00'}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        )}\n\n        {/* Action Buttons */}
         <View style={styles.actionsSection}>
           {event.status === 'active' && (
             <TouchableOpacity style={styles.contributeButton} onPress={handleContribute}>
@@ -558,6 +573,12 @@ const styles = StyleSheet.create({
   contributionDate: {
     fontSize: 14,
     color: GlobalStyles.colors.gray500,
+  },
+  contributionMessage: {
+    fontSize: 13,
+    color: GlobalStyles.colors.gray600,
+    fontStyle: 'italic',
+    marginTop: 4,
   },
   contributionAmount: {
     fontSize: 16,
