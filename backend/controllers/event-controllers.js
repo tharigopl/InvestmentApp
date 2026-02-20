@@ -924,6 +924,142 @@ const completeEvent = async (req, res, next) => {
   }
 };
 
+getFundsSummary = async (req, res, next) => {
+  const { eventId } = req.params;
+  const userId = req.userData.userId;
+
+  try {
+    const event = await InvestmentEvent.findById(eventId)
+      .populate('contributors.user', 'fname lname')
+      .populate('createdBy', 'fname lname');
+
+    // Check if user is event creator
+    if (event.createdBy._id.toString() !== userId.toString()) {
+      return next(new HttpError('Unauthorized', 403));
+    }
+
+    // Calculate fees
+    const totalFees = event.contributors.reduce((sum, c) => {
+      return sum + (c.amount * 0.029 + 0.30);
+    }, 0);
+
+    const netAmount = event.currentAmount - totalFees;
+
+    res.json({
+      totalRaised: event.currentAmount,
+      stripeFees: totalFees,
+      netAmount: netAmount,
+      contributors: event.contributors,
+      status: event.status,
+      selectedInvestments: event.selectedInvestments,
+    });
+  } catch (error) {
+    return next(new HttpError('Failed to get funds summary', 500));
+  }
+};
+
+initiateWithdrawal = async (req, res, next) => {
+  const { eventId } = req.params;
+  const userId = req.userData.userId;
+
+  try {
+    const event = await InvestmentEvent.findById(eventId)
+      .populate('createdBy');
+
+    // Verify user is event creator
+    if (event.createdBy._id.toString() !== userId.toString()) {
+      return next(new HttpError('Unauthorized', 403));
+    }
+
+    // Verify event is funded
+    if (event.status !== 'funded') {
+      return next(new HttpError('Event must be funded to withdraw', 400));
+    }
+
+    // Get user's Stripe connected account
+    const user = await User.findById(userId);
+    
+    if (!user.stripeAccountId) {
+      return next(new HttpError('No Stripe account connected', 400));
+    }
+
+    // Calculate net amount (after Stripe fees)
+    const totalFees = event.contributors.reduce((sum, c) => {
+      return sum + (c.amount * 0.029 + 0.30);
+    }, 0);
+    const netAmount = event.currentAmount - totalFees;
+
+    // Create Stripe transfer/payout
+    const transfer = await stripe.transfers.create({
+      amount: Math.round(netAmount * 100), // Convert to cents
+      currency: 'usd',
+      destination: user.stripeAccountId,
+      description: `Withdrawal for event: ${event.eventTitle}`,
+      metadata: {
+        eventId: event._id.toString(),
+        userId: userId.toString(),
+      }
+    });
+
+    // Update event status
+    event.status = 'purchasing';
+    await event.save();
+
+    res.json({
+      success: true,
+      transferId: transfer.id,
+      amount: netAmount,
+      message: 'Withdrawal initiated. Funds will arrive in 2-3 business days.',
+    });
+  } catch (error) {
+    console.error('Withdrawal error:', error);
+    return next(new HttpError('Failed to initiate withdrawal', 500));
+  }
+};
+
+markStocksPurchased = async (req, res, next) => {
+  const { eventId } = req.params;
+  const userId = req.userData.userId;
+  const { purchaseDetails } = req.body; // Optional: proof of purchase
+
+  try {
+    const event = await InvestmentEvent.findById(eventId)
+      .populate('createdBy')
+      .populate('recipientUser', 'fname lname email');
+
+    // Verify user is event creator
+    if (event.createdBy._id.toString() !== userId.toString()) {
+      return next(new HttpError('Unauthorized', 403));
+    }
+
+    // Verify event is in purchasing state
+    if (event.status !== 'purchasing' && event.status !== 'funded') {
+      return next(new HttpError('Event must be in purchasing state', 400));
+    }
+
+    // Update event
+    event.status = 'invested';
+    event.purchasedAt = new Date();
+    if (purchaseDetails) {
+      event.purchaseDetails = purchaseDetails;
+    }
+    
+    await event.save();
+
+    // TODO: Send notification to recipient
+    // await sendGiftNotification(event.recipientUser.email, event);
+
+    res.json({
+      success: true,
+      event: event,
+      message: 'Stocks marked as purchased! Recipient will be notified.',
+    });
+  } catch (error) {
+    console.error('Mark purchased error:', error);
+    return next(new HttpError('Failed to mark as purchased', 500));
+  }
+};
+
 // ============================================
 // EXPORTS
 // ============================================
@@ -941,4 +1077,7 @@ module.exports = {
   getEventParticipants,
   cancelEvent,
   completeEvent,
+  getFundsSummary,
+  initiateWithdrawal,
+  markStocksPurchased,
 };

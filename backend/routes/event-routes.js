@@ -48,4 +48,10 @@ router.post('/:eventId/cancel', checkAuth, eventController.cancelEvent);
 // Complete event
 router.post('/:eventId/complete', checkAuth, eventController.completeEvent);
 
+router.get('/:eventId/funds-summary', checkAuth, eventController.getFundsSummary);
+
+router.post('/:eventId/initiate-withdrawal', checkAuth, eventController.initiateWithdrawal);
+
+router.post('/:eventId/mark-purchased', checkAuth, eventController.markStocksPurchased);
+
 module.exports = router;

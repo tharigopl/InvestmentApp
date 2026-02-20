@@ -38,6 +38,9 @@ router.get('/trending', stockController.getTrendingStocks);
 // Get popular ETFs
 router.get('/etfs', stockController.getPopularETFs);
 
+router.get('/current-price/:symbol', checkAuth, stockController.getCurrentPrice);
+
+
 // ============================================
 // PROTECTED ROUTES (Auth Required)
 // ============================================

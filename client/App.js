@@ -55,14 +55,16 @@ import config from './config';
 //Stripe
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
+const STRIPE_PUBLISHABLE_KEY = config.STRIPE_PUBLISHABLE_KEY;
+const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
+
+import ManageEventFunds from './screens/ManageEventFunds';
+import PurchaseStocks from './screens/PurchaseStocks';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 const BottomTabs = createBottomTabNavigator();
 
-
-const STRIPE_PUBLISHABLE_KEY = config.STRIPE_PUBLISHABLE_KEY;
-const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
 
 
 // ============================================
@@ -80,6 +82,76 @@ function AuthStack() {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Signup" component={SignupScreen} />
     </Stack.Navigator>
+  );
+}
+
+// ============================================
+//  NEW: INVESTMENT EVENTS OVERVIEW (Bottom Tabs)
+// ============================================
+function ManageFundsOverview() {
+  const authCtx = useContext(AuthContext);
+  const userCtx = useContext(UserContext);
+  const stripeCtx = useContext(StripeContext);
+  console.log("Configs ", config.STRIPE_PUBLISHABLE_KEY);
+  function logout(){
+    console.log("Logging out...");
+    authCtx.logout();
+    userCtx.removeuseraccount();
+    stripeCtx.removestripeaccount();
+  }
+
+  return (
+    <BottomTabs.Navigator
+      screenOptions={({ navigation }) => ({
+        headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        headerTintColor: 'white',
+        tabBarStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        tabBarActiveTintColor: GlobalStyles.colors.accent500,
+        headerLeft: ({ tintColor }) => (
+          <IconButton
+            icon="menu"
+            size={24}
+            color={tintColor}
+            onPress={() => navigation.getParent()?.openDrawer()}
+          />
+        ),
+        //  LOGOUT BUTTON IN HEADER
+        headerRight: ({ tintColor }) => (
+          <IconButton
+            icon="exit"
+            size={24}
+            color={tintColor}
+            onPress={logout}
+          />
+        ),
+      })}
+    >
+      {/* ManageEventFunds Tab */}
+      <BottomTabs.Screen
+        name="ManageEventFunds"
+        component={ManageEventFunds}
+        options={{
+          title: 'Manage Event Funds',
+          tabBarLabel: 'ManageEventFunds',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="gift" size={size} color={color} />
+          ),
+        }}
+      />
+
+      {/* My PurchaseStocks Tab */}
+      <BottomTabs.Screen
+        name="PurchaseStocks"
+        component={PurchaseStocks} // You can replace with a dedicated MyContributions screen
+        options={{
+          title: 'Purchase Stocks',
+          tabBarLabel: 'PurchaseStocks',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="wallet" size={size} color={color} />
+          ),
+        }}
+      />
+    </BottomTabs.Navigator>
   );
 }
 
@@ -167,7 +239,7 @@ function InvestmentEventsOverview() {
 }
 
 // ============================================
-//  NEW: INVESTMENT EVENTS OVERVIEW (Bottom Tabs)
+//  NEW: Add Friends OVERVIEW (Bottom Tabs)
 // ============================================
 function AddFriendsOverview() {
   const authCtx = useContext(AuthContext);
@@ -513,6 +585,18 @@ function DrawerNavig(){
           headerShown: false, // InvestmentEventsOverview has its own header with logout
         }}
       />
+       {/*  NEW: Manage Funds - Main Feature */}
+       <Drawer.Screen 
+        name="ManageFunds" 
+        component={ManageFundsOverview}
+        options={{
+          title: '💰 Manage Funds',
+          drawerIcon: ({ focused, size, color }) => (
+            <Ionicons name="gift" size={size} color={color} />
+          ),
+          headerShown: false, // 
+        }}
+      />
       {/*  NEW: Add Friend - Main Feature */}
       <Drawer.Screen 
         name="AddFriends" 
@@ -661,6 +745,24 @@ function AuthenticatedStack() {
         component={ContributionScreen}
         options={{
           title: 'Contribute',
+          presentation: 'card',
+        }}
+      />
+
+      {/* ✅ NEW: Investment Management Screens */}
+      <Stack.Screen 
+        name="ManageEventFunds" 
+        component={ManageEventFunds}
+        options={{
+          title: 'Manage Funds',
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen 
+        name="PurchaseStocks" 
+        component={PurchaseStocks}
+        options={{
+          title: 'Purchase Stocks',
           presentation: 'card',
         }}
       />

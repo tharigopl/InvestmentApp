@@ -41,7 +41,15 @@ const investmentEventSchema = new Schema({
     
     status: { 
       type: String, 
-      enum: ['draft', 'active', 'funded', 'purchased', 'completed', 'cancelled'],
+      enum: [
+        'draft',     
+        'active',           // Collecting contributions
+        'funded',           // ✅ NEW: Goal reached, ready to invest
+        'purchasing',       // ✅ NEW: Host is buying stocks
+        'invested',         // ✅ NEW: Stocks purchased
+        'completed',        // Gift delivered
+        'cancelled'         // Event cancelled
+      ],
       default: 'draft'
     },
     

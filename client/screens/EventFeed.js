@@ -1,5 +1,5 @@
-// client/screens/EventFeed.js
-import React, { useState, useEffect, useCallback } from 'react';
+// client/screens/EventFeed.js - UPDATED WITH EARLYBIRD STYLE + MANAGE FUNDS
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import {
   View,
   Text,
@@ -14,11 +14,16 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { GlobalStyles } from '../constants/styles';
 import { getMyEvents, deleteEvent } from '../util/events';
+import { AuthContext } from '../store/auth-context';
 
 const EventFeed = () => {
   const navigation = useNavigation();
+  const authCtx = useContext(AuthContext);
+  const currentUserId = authCtx?.uid;
+
   const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -29,7 +34,7 @@ const EventFeed = () => {
     loadEvents();
   }, [filter]);
 
-  // ✅ NEW: Reload events when screen comes into focus
+  // ✅ Reload events when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       console.log('🔄 EventFeed focused - reloading events...');
@@ -125,17 +130,66 @@ const EventFeed = () => {
     }
   };
 
+  const getStatusInfo = (event) => {
+    const progress = (event.currentAmount / event.targetAmount) * 100;
+    const isFullyFunded = progress >= 100;
+    
+    switch (event.status) {
+      case 'funded':
+        return {
+          color: '#4ECDC4',
+          icon: 'wallet',
+          text: '💰 Ready to Invest',
+          badge: true,
+        };
+      case 'purchasing':
+        return {
+          color: '#FFD93D',
+          icon: 'cart',
+          text: '🛒 Purchasing',
+          badge: true,
+        };
+      case 'invested':
+        return {
+          color: '#95E1D3',
+          icon: 'checkmark-circle',
+          text: '✅ Invested',
+          badge: true,
+        };
+      case 'completed':
+        return {
+          color: '#A8E6CF',
+          icon: 'gift',
+          text: '🎁 Completed',
+          badge: true,
+        };
+      default:
+        return isFullyFunded ? {
+          color: '#4ECDC4',
+          icon: 'wallet',
+          text: '💰 Goal Reached!',
+          badge: true,
+        } : null;
+    }
+  };
+
   const renderEventCard = ({ item }) => {
     const progress = (item.currentAmount / item.targetAmount) * 100;
+    const isFullyFunded = progress >= 100;
+    const statusInfo = getStatusInfo(item);
+    const eventId = item._id || item.id;
     const daysLeft = item.deadline
       ? Math.ceil((new Date(item.deadline) - new Date()) / (1000 * 60 * 60 * 24))
       : null;
+
+    // Check if current user is the event creator
+    const isCreator = item.createdBy?._id === currentUserId || item.createdBy === currentUserId;
 
     return (
       <View style={styles.eventCard}>
         <TouchableOpacity
           style={styles.cardTouchable}
-          onPress={() => handleEventPress(item._id || item.id)}
+          onPress={() => handleEventPress(eventId)}
           activeOpacity={0.7}
         >
           {/* Event Image */}
@@ -148,17 +202,13 @@ const EventFeed = () => {
             style={styles.eventImage}
           />
 
-          {/* Status Badge */}
-          <View style={[styles.statusBadge, styles[`status${item.status}`]]}>
-            <Text style={styles.statusText}>
-              {item.status === 'active' && '🔥 Active'}
-              {item.status === 'funded' && '✅ Funded'}
-              {item.status === 'awaiting_investment' && '⏳ Ready'}
-              {item.status === 'invested' && '💰 Invested'}
-              {item.status === 'completed' && '🎉 Complete'}
-              {item.status === 'cancelled' && '❌ Cancelled'}
-            </Text>
-          </View>
+          {/* Status Badge (top right) */}
+          {statusInfo?.badge && (
+            <View style={[styles.statusBadge, { backgroundColor: statusInfo.color }]}>
+              <Ionicons name={statusInfo.icon} size={14} color="#fff" />
+              <Text style={styles.statusText}>{statusInfo.text}</Text>
+            </View>
+          )}
 
         {/* Event Content */}
         <View style={styles.eventContent}>
@@ -166,11 +216,13 @@ const EventFeed = () => {
           <Text style={styles.eventTitle}>{item.eventTitle || item.title}</Text>
 
           {/* Recipient Info */}
-          {item.recipientName && (
+          {(item.recipientName || item.recipientUser) && (
             <View style={styles.recipientRow}>
-              <Ionicons name="person-circle-outline" size={16} color={GlobalStyles.colors.gray500} />
               <Text style={styles.recipientText}>
-                for <Text style={styles.recipientName}>{item.recipientName}</Text>
+                For: <Text style={styles.recipientName}>
+                  {item.recipientName || 
+                   (item.recipientUser && `${item.recipientUser.fname} ${item.recipientUser.lname}`)}
+                </Text>
               </Text>
             </View>
           )}
@@ -178,7 +230,7 @@ const EventFeed = () => {
           {/* Event Date */}
           {item.eventDate && (
             <View style={styles.infoRow}>
-              <Ionicons name="calendar-outline" size={16} color={GlobalStyles.colors.gray500} />
+              <Ionicons name="calendar-outline" size={16} color="#666" />
               <Text style={styles.infoText}>
                 {new Date(item.eventDate).toLocaleDateString('en-US', {
                   month: 'short',
@@ -192,7 +244,7 @@ const EventFeed = () => {
           {/* Stock Symbol */}
           {item.selectedInvestments && item.selectedInvestments.length > 0 && (
             <View style={styles.stockRow}>
-              <Ionicons name="trending-up" size={16} color={GlobalStyles.colors.primary500} />
+              <Ionicons name="trending-up" size={16} color="#4ECDC4" />
               <Text style={styles.stockText}>
                 {item.selectedInvestments.map(s => s.symbol).join(', ')}
               </Text>
@@ -202,45 +254,73 @@ const EventFeed = () => {
           {/* Progress Bar */}
           <View style={styles.progressSection}>
             <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${Math.min(progress, 100)}%` }]} />
+              <LinearGradient
+                colors={isFullyFunded ? ['#4ECDC4', '#44A08D'] : ['#FF6B6B', '#FF8E53']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.progressFill, { width: `${Math.min(progress, 100)}%` }]}
+              />
             </View>
-            <Text style={styles.progressText}>{progress.toFixed(0)}% funded</Text>
+            <View style={styles.progressInfo}>
+              <Text style={styles.progressText}>
+                ${(item.currentAmount || 0).toFixed(0)} / ${(item.targetAmount || 0).toFixed(0)}
+              </Text>
+              <Text style={[
+                styles.progressPercent,
+                isFullyFunded && styles.progressPercentComplete
+              ]}>
+                {progress.toFixed(0)}%
+              </Text>
+            </View>
           </View>
 
-          {/* Amount Info */}
-          <View style={styles.amountRow}>
-            <View style={styles.amountItem}>
-              <Text style={styles.amountValue}>${(item.currentAmount || 0).toFixed(2)}</Text>
-              <Text style={styles.amountLabel}>raised</Text>
+          {/* Contributors Count */}
+          {item.contributors && item.contributors.length > 0 && (
+            <View style={styles.contributorsRow}>
+              <Ionicons name="people" size={16} color="#666" />
+              <Text style={styles.contributorsText}>
+                {item.contributors.length} contributor{item.contributors.length !== 1 ? 's' : ''}
+              </Text>
             </View>
-            <View style={styles.amountDivider} />
-            <View style={styles.amountItem}>
-              <Text style={styles.amountValue}>${(item.targetAmount || 0).toFixed(2)}</Text>
-              <Text style={styles.amountLabel}>goal</Text>
-            </View>
-            <View style={styles.amountDivider} />
-            <View style={styles.amountItem}>
-              <Text style={styles.amountValue}>{(item.contributors?.length || 0)}</Text>
-              <Text style={styles.amountLabel}>contributors</Text>
-            </View>
-          </View>
+          )}
 
           {/* Days Left */}
           {item.status === 'active' && daysLeft && daysLeft > 0 && (
             <View style={styles.daysLeftContainer}>
-              <Ionicons name="time-outline" size={14} color={GlobalStyles.colors.primary500} />
+              <Ionicons name="time-outline" size={14} color="#FF6B6B" />
               <Text style={styles.daysLeftText}>
                 {daysLeft} {daysLeft === 1 ? 'day' : 'days'} left
               </Text>
             </View>
           )}
 
-          {/* Contribute Button */}
-          {item.status === 'active' && (
+          {/* ✅ NEW: Manage Funds Button (For Creator When Funded) */}
+          {isCreator && (item.status === 'funded' || item.status === 'purchasing') && (
+            <TouchableOpacity
+              style={styles.manageFundsButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                navigation.navigate('ManageEventFunds', { eventId });
+              }}
+            >
+              <LinearGradient
+                colors={['#4ECDC4', '#44A08D']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.manageFundsGradient}
+              >
+                <Ionicons name="wallet" size={18} color="#fff" />
+                <Text style={styles.manageFundsText}>Manage Funds</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+
+          {/* Contribute Button (For Active Events) */}
+          {item.status === 'active' && !isFullyFunded && (
             <TouchableOpacity
               style={styles.contributeButton}
               onPress={() => {
-                navigation.navigate('ContributionScreen', { eventId: item._id || item.id });
+                navigation.navigate('ContributionScreen', { eventId });
               }}
             >
               <Text style={styles.contributeButtonText}>Contribute</Text>
@@ -254,8 +334,8 @@ const EventFeed = () => {
         <TouchableOpacity
           style={styles.deleteButton}
           onPress={() => {
-            console.log('🗑️ Delete button pressed for event:', item._id || item.id);
-            handleDelete(item._id || item.id, item.eventTitle || item.title);
+            console.log('🗑️ Delete button pressed for event:', eventId);
+            handleDelete(eventId, item.eventTitle || item.title);
           }}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
@@ -274,18 +354,19 @@ const EventFeed = () => {
 
       {/* Filter Tabs */}
       <View style={styles.filterContainer}>
-        {['all', 'active', 'funded', 'completed'].map((filterOption) => (
+        {['all', 'active', 'funded', 'invested'].map((filterOption) => (
           <TouchableOpacity
             key={filterOption}
-            style={[styles.filterTab, filter === filterOption && styles.filterTabActive]}
+            style={[
+              styles.filterTab,
+              filter === filterOption && styles.filterTabActive
+            ]}
             onPress={() => setFilter(filterOption)}
           >
-            <Text
-              style={[
-                styles.filterTabText,
-                filter === filterOption && styles.filterTabTextActive,
-              ]}
-            >
+            <Text style={[
+              styles.filterTabText,
+              filter === filterOption && styles.filterTabTextActive
+            ]}>
               {filterOption.charAt(0).toUpperCase() + filterOption.slice(1)}
             </Text>
           </TouchableOpacity>
@@ -296,10 +377,13 @@ const EventFeed = () => {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="gift-outline" size={80} color={GlobalStyles.colors.gray300} />
-      <Text style={styles.emptyTitle}>No events yet</Text>
+      <Text style={styles.emptyEmoji}>📊</Text>
+      <Text style={styles.emptyTitle}>No events found</Text>
       <Text style={styles.emptySubtitle}>
-        Create your first investment event to start gifting stocks!
+        {filter === 'all' 
+          ? 'Create your first investment event!'
+          : `No ${filter} events yet`
+        }
       </Text>
       <TouchableOpacity style={styles.emptyButton} onPress={handleCreateEvent}>
         <Text style={styles.emptyButtonText}>Create Event</Text>
@@ -307,19 +391,27 @@ const EventFeed = () => {
     </View>
   );
 
-  if (isLoading) {
+  if (isLoading && events.length === 0) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={GlobalStyles.colors.primary500} />
+        <ActivityIndicator size="large" color="#FF6B6B" />
         <Text style={styles.loadingText}>Loading events...</Text>
       </View>
     );
   }
 
+  const filteredEvents = events.filter(event => {
+    if (filter === 'all') return true;
+    if (filter === 'active') return event.status === 'active';
+    if (filter === 'funded') return event.status === 'funded';
+    if (filter === 'invested') return event.status === 'invested' || event.status === 'completed';
+    return true;
+  });
+
   return (
     <View style={styles.container}>
       <FlatList
-        data={events}
+        data={filteredEvents}
         renderItem={renderEventCard}
         keyExtractor={(item) => item._id || item.id}
         ListHeaderComponent={renderHeader}
@@ -329,15 +421,21 @@ const EventFeed = () => {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={onRefresh}
-            tintColor={GlobalStyles.colors.primary500}
+            tintColor="#FF6B6B"
           />
         }
-        showsVerticalScrollIndicator={false}
       />
 
-      {/* Floating Create Button */}
+      {/* Create Event FAB */}
       <TouchableOpacity style={styles.floatingButton} onPress={handleCreateEvent}>
-        <Ionicons name="add" size={30} color="#fff" />
+        <LinearGradient
+          colors={['#FF6B6B', '#FF8E53']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.fabGradient}
+        >
+          <Ionicons name="add" size={32} color="#fff" />
+        </LinearGradient>
       </TouchableOpacity>
     </View>
   );
@@ -346,18 +444,19 @@ const EventFeed = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: GlobalStyles.colors.gray50,
+    backgroundColor: '#FFF9F0',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: GlobalStyles.colors.gray50,
+    backgroundColor: '#FFF9F0',
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: GlobalStyles.colors.gray500,
+    color: '#666',
+    fontWeight: '500',
   },
   listContent: {
     paddingBottom: 100,
@@ -366,17 +465,17 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: GlobalStyles.colors.gray200,
+    borderBottomColor: '#F0F0F0',
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: GlobalStyles.colors.gray800,
+    fontWeight: '800',
+    color: '#333',
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: GlobalStyles.colors.gray500,
+    color: '#666',
     marginBottom: 20,
   },
   filterContainer: {
@@ -387,15 +486,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: GlobalStyles.colors.gray100,
+    backgroundColor: '#F5F5F5',
   },
   filterTabActive: {
-    backgroundColor: GlobalStyles.colors.primary500,
+    backgroundColor: '#FF6B6B',
   },
   filterTabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: GlobalStyles.colors.gray600,
+    color: '#666',
   },
   filterTabTextActive: {
     color: '#fff',
@@ -403,15 +502,15 @@ const styles = StyleSheet.create({
   eventCard: {
     position: 'relative',
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 20,
     marginHorizontal: 16,
     marginTop: 16,
     overflow: 'hidden',
-    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 8,
+    elevation: 3,
   },
   cardTouchable: {
     flex: 1,
@@ -420,78 +519,60 @@ const styles = StyleSheet.create({
   eventImage: {
     width: '100%',
     height: 200,
-    backgroundColor: GlobalStyles.colors.gray200,
+    backgroundColor: '#F0F0F0',
   },
   statusBadge: {
     position: 'absolute',
     top: 12,
     right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
+    gap: 4,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#fff',
   },
   deleteButton: {
     position: 'absolute',
     top: 12,
     left: 12,
-    backgroundColor: 'rgba(239, 68, 68, 0.9)',
+    backgroundColor: '#FF6B6B',
     width: 36,
     height: 36,
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 9999,
-    shadowColor: '#000',
+    shadowColor: '#FF6B6B',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
     elevation: 999,
   },
-  statusactive: {
-    backgroundColor: GlobalStyles.colors.primary500,
-  },
-  statusfunded: {
-    backgroundColor: GlobalStyles.colors.success500,
-  },
-  statusawaiting_investment: {
-    backgroundColor: GlobalStyles.colors.warning500,
-  },
-  statusinvested: {
-    backgroundColor: GlobalStyles.colors.info500,
-  },
-  statuscompleted: {
-    backgroundColor: GlobalStyles.colors.accent500,
-  },
-  statuscancelled: {
-    backgroundColor: GlobalStyles.colors.error500,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
   eventContent: {
-    padding: 16,
+    padding: 20,
   },
   eventTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: GlobalStyles.colors.gray800,
+    fontWeight: '800',
+    color: '#333',
     marginBottom: 8,
   },
   recipientRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
     marginBottom: 8,
   },
   recipientText: {
     fontSize: 14,
-    color: GlobalStyles.colors.gray500,
+    color: '#666',
   },
   recipientName: {
-    fontWeight: '600',
-    color: GlobalStyles.colors.gray700,
+    fontWeight: '700',
+    color: '#333',
   },
   infoRow: {
     flexDirection: 'row',
@@ -501,61 +582,60 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 14,
-    color: GlobalStyles.colors.gray600,
+    color: '#666',
   },
   stockRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   stockText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: GlobalStyles.colors.primary600,
+    fontWeight: '700',
+    color: '#4ECDC4',
     flex: 1,
   },
   progressSection: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   progressBar: {
-    height: 8,
-    backgroundColor: GlobalStyles.colors.gray200,
-    borderRadius: 4,
+    height: 12,
+    backgroundColor: '#F0F0F0',
+    borderRadius: 6,
     overflow: 'hidden',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: GlobalStyles.colors.primary500,
-    borderRadius: 4,
   },
-  progressText: {
-    fontSize: 12,
-    color: GlobalStyles.colors.gray600,
-    textAlign: 'right',
-  },
-  amountRow: {
+  progressInfo: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 12,
-  },
-  amountItem: {
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  amountValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: GlobalStyles.colors.gray800,
+  progressText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
   },
-  amountLabel: {
-    fontSize: 12,
-    color: GlobalStyles.colors.gray500,
-    marginTop: 2,
+  progressPercent: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FF6B6B',
   },
-  amountDivider: {
-    width: 1,
-    backgroundColor: GlobalStyles.colors.gray300,
+  progressPercentComplete: {
+    color: '#4ECDC4',
+  },
+  contributorsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  contributorsText: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 6,
   },
   daysLeftContainer: {
     flexDirection: 'row',
@@ -566,68 +646,93 @@ const styles = StyleSheet.create({
   daysLeftText: {
     fontSize: 12,
     fontWeight: '600',
-    color: GlobalStyles.colors.primary600,
+    color: '#FF6B6B',
+  },
+  manageFundsButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  manageFundsGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  manageFundsText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+    marginLeft: 8,
   },
   contributeButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: GlobalStyles.colors.primary500,
+    backgroundColor: '#FF6B6B',
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 12,
+    marginTop: 8,
   },
   contributeButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#fff',
   },
   emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
     paddingHorizontal: 32,
-    paddingTop: 60,
+  },
+  emptyEmoji: {
+    fontSize: 64,
+    marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: GlobalStyles.colors.gray700,
-    marginTop: 16,
+    fontWeight: '700',
+    color: '#333',
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: GlobalStyles.colors.gray500,
+    color: '#666',
     textAlign: 'center',
     marginBottom: 24,
   },
   emptyButton: {
-    backgroundColor: GlobalStyles.colors.primary500,
+    backgroundColor: '#FF6B6B',
     paddingHorizontal: 32,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 25,
   },
   emptyButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#fff',
   },
   floatingButton: {
     position: 'absolute',
     right: 20,
     bottom: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: GlobalStyles.colors.primary500,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    overflow: 'hidden',
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabGradient: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
   },
 });
 

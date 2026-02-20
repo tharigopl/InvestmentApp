@@ -499,6 +499,26 @@ const getPopularETFs = async (req, res, next) => {
   }
 };
 
+getCurrentPrice = async (req, res, next) => {
+  const { symbol } = req.params;
+
+  try {
+    // Use your existing stock service
+    const quote = await stockService.getStockQuote(symbol);
+
+    res.json({
+      symbol: symbol,
+      price: quote.price,
+      change: quote.change,
+      changePercent: quote.changePercent,
+      timestamp: new Date(),
+    });
+  } catch (error) {
+    console.error('Stock price error:', error);
+    return next(new HttpError('Failed to get stock price', 500));
+  }
+};
+
 // ============================================
 // EXPORTS
 // ============================================
@@ -522,4 +542,6 @@ module.exports = {
   // Discovery
   getTrendingStocks,
   getPopularETFs,
+
+  getCurrentPrice,
 };

@@ -135,7 +135,7 @@ exports.confirmContribution = async (req, res) => {
       if (event.currentAmount >= event.targetAmount && event.status === 'active') {
         event.status = 'funded';
         // Trigger stock purchase workflow
-        await initiateStockPurchase(event._id);
+        // await initiateStockPurchase(event._id);
       }
       
       await event.save();

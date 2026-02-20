@@ -44,3 +44,59 @@ export const Colors = {
       gray800: '#1a1523',     // added
     },
   };
+
+  export const EarlybirdColors = {
+    // Primary
+    coral: '#FF6B6B',
+    coralLight: '#FF8E53',
+    
+    // Secondary
+    turquoise: '#4ECDC4',
+    turquoiseDark: '#44A08D',
+    turquoiseLight: '#95E1D3',
+    
+    // Accents
+    yellow: '#FFD93D',
+    mint: '#A8E6CF',
+    
+    // Backgrounds
+    cream: '#FFF9F0',
+    white: '#FFFFFF',
+    cardBg: '#F8FCFF',
+    
+    // Text
+    dark: '#333333',
+    medium: '#666666',
+    light: '#999999',
+    
+    // Semantic
+    success: '#4ECDC4',
+    warning: '#FFD93D',
+    error: '#FF6B6B',
+    info: '#E8FFF8',
+  };
+
+  export const EarlybirdRadius = {
+    small: 12,
+    medium: 16,
+    large: 20,
+    button: 25,
+    circle: 999,
+  };
+
+  export const EarlybirdShadows = {
+    card: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    button: {
+      shadowColor: '#FF6B6B',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 5,
+    },
+  };
