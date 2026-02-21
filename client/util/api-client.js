@@ -25,6 +25,11 @@ apiClient.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
       
+      // Let axios set it automatically with proper boundary
+      if (config.data instanceof FormData) {
+        delete config.headers['Content-Type'];
+      }
+
       // Log request in development
       if (__DEV__) {
         console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`);

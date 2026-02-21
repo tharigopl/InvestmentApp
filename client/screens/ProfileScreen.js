@@ -1,4 +1,4 @@
-// client/screens/ProfileScreen.js - FIXED API URL ISSUE
+// client/screens/ProfileScreen.js - USING APICLIENT & USER UTILS
 import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
@@ -15,10 +15,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthContext } from '../store/auth-context';
 import { UserContext } from '../store/user-context';
 import { StripeContext } from '../store/stripe-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserProfileData, updateProfilePicture } from '../util/user';
 import { API_URL } from '../config/api';
 
 export default function ProfileScreen({ navigation }) {
@@ -29,6 +30,7 @@ export default function ProfileScreen({ navigation }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [profileImageUrl, setProfileImageUrl] = useState(null);
   const [stats, setStats] = useState({
     eventsCreated: 0,
     eventsContributed: 0,
@@ -41,34 +43,37 @@ export default function ProfileScreen({ navigation }) {
     loadUserData();
   }, []);
 
+  useEffect(() => {
+    if (userCtx?.useraccount?.profileImage) {
+      console.log('📸 Setting profile image from context:', userCtx.useraccount.profileImage);
+      setProfileImageUrl(userCtx.useraccount.profileImage);
+    }
+  }, [userCtx?.useraccount?.profileImage]);
+
+  /**
+   * Load user profile data using utility functions
+   */
   const loadUserData = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
       const userId = await AsyncStorage.getItem('uid');
       
-      if (!token || !userId) {
+      if (!userId) {
+        console.log('No user ID found');
         setIsLoading(false);
         return;
       }
 
-      // TODO: Fetch user stats from API
-      // Example:
-      // const response = await fetch(`${API_URL}/api/users/${userId}/stats`, {
-      //   headers: { Authorization: `Bearer ${token}` }
-      // });
-      // const data = await response.json();
-      // setStats(data);
-      
-      // For now, using mock data
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Fetch user profile with stats (uses apiClient internally)
+      const profileData = await getUserProfileData(userId);
       
       setStats({
-        eventsCreated: 5,
-        eventsContributed: 12,
-        totalContributed: 450.00,
-        totalRaised: 2340.00,
-        friendsCount: 23,
+        eventsCreated: profileData.eventsCreated || 0,
+        eventsContributed: profileData.eventsContributed || 0,
+        totalContributed: profileData.totalContributed || 0,
+        totalRaised: profileData.totalRaised || 0,
+        friendsCount: profileData.friendsCount || 0,
       });
+
     } catch (error) {
       console.error('Error loading user data:', error);
       Alert.alert('Error', 'Failed to load profile data');
@@ -96,7 +101,7 @@ export default function ProfileScreen({ navigation }) {
           return;
         }
       }
-
+  
       // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -104,88 +109,66 @@ export default function ProfileScreen({ navigation }) {
         aspect: [1, 1],
         quality: 0.8,
       });
-
+  
       if (!result.canceled && result.assets && result.assets[0]) {
-        const imageUri = result.assets[0].uri;
-        await uploadProfilePicture(imageUri);
+        const asset = result.assets[0];
+        console.log('📷 Image picker result:', asset);
+        
+        // For web, we need to get the actual blob from the URI
+        if (Platform.OS === 'web' && asset.uri) {
+          await uploadImage(asset.uri);
+        } else {
+          await uploadImage(asset.uri);
+        }
       }
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to select image');
     }
   };
-
-  const uploadProfilePicture = async (imageUri) => {
+  
+  const uploadImage = async (imageData) => {
     setIsUploadingImage(true);
     
     try {
-      const token = await AsyncStorage.getItem('token');
       const userId = await AsyncStorage.getItem('uid');
       
-      if (!token || !userId) {
+      if (!userId) {
         throw new Error('Not authenticated');
       }
-
-      // Create form data
-      const formData = new FormData();
+  
+      console.log('📤 Starting upload...');
       
-      // Handle file upload based on platform
-      if (Platform.OS === 'web') {
-        // Web: Convert to blob
-        const response = await fetch(imageUri);
-        const blob = await response.blob();
-        formData.append('profileImage', blob, 'profile.jpg');
-      } else {
-        // Mobile: Use file URI
-        const filename = imageUri.split('/').pop();
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : 'image/jpeg';
-        
-        formData.append('profileImage', {
-          uri: imageUri,
-          name: filename,
-          type: type,
-        });
+      // Upload
+      const data = await updateProfilePicture(userId, imageData);
+      console.log('✅ Upload response:', data);
+      
+      // Build full URL
+      let imageUrl = data.profileImageUrl;
+      if (imageUrl && !imageUrl.startsWith('http')) {
+        imageUrl = `${API_URL}${imageUrl}`;
       }
+      
+      // Add cache buster to force reload
+      imageUrl = `${imageUrl}?t=${Date.now()}`;
+      
+      console.log('🖼️ New image URL:', imageUrl);
 
-      // Upload to API
-      const uploadUrl = `${API_URL}/api/users/${userId}/profile-picture`;
-      
-      console.log('📤 Uploading to:', uploadUrl);
-      
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          // Don't set Content-Type header - let the browser/fetch set it with boundary
-        },
-        body: formData,
-      });
+      setProfileImageUrl(imageUrl);
 
-      if (!uploadResponse.ok) {
-        const errorData = await uploadResponse.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Upload failed');
-      }
-
-      const data = await uploadResponse.json();
       
-      // Update user context with new image URL
-      // Build full URL if needed
-      const imageUrl = data.profileImageUrl.startsWith('http') 
-        ? data.profileImageUrl 
-        : `${API_URL}${data.profileImageUrl}`;
-      
-      if (userCtx?.userAccount) {
+      // Update UserContext
+      if (userCtx?.useraccount) {
         userCtx.setuseraccount({
-          ...userCtx.userAccount,
+          ...userCtx.useraccount,
           profileImage: imageUrl,
         });
       }
-
+  
       Alert.alert('Success! 🎉', 'Profile picture updated successfully');
     } catch (error) {
-      console.error('Error uploading image:', error);
-      Alert.alert('Upload Failed', error.message || 'Failed to upload profile picture. Please try again.');
+      console.error('❌ Error uploading image:', error);
+      Alert.alert('Upload Failed', error.message || 'Failed to upload.');
     } finally {
       setIsUploadingImage(false);
     }
@@ -222,7 +205,6 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handleViewEvents = () => {
-    // Navigate to the EventFeed screen
     navigation.navigate('Drawer', {
       screen: 'InvestmentEvents',
       params: {
@@ -240,12 +222,13 @@ export default function ProfileScreen({ navigation }) {
     );
   }
 
-  const userInitial = userCtx?.userAccount?.fname?.[0]?.toUpperCase() || '?';
-  const userName = userCtx?.userAccount?.fname 
-    ? `${userCtx.userAccount.fname} ${userCtx.userAccount.lname || ''}`.trim()
+  const userInitial = userCtx?.useraccount?.fname?.[0]?.toUpperCase() || '?';
+  const userName = userCtx?.useraccount?.fname 
+    ? `${userCtx.useraccount.fname} ${userCtx.useraccount.lname || ''}`.trim()
     : 'User';
   const userEmail = userCtx?.userAccount?.email || 'email@example.com';
-  const profileImage = userCtx?.userAccount?.profileImage;
+  const profileImage = profileImageUrl || userCtx?.useraccount?.profileImage;
+  console.log('🎨 Current profile image:', profileImage);
 
   return (
     <ScrollView 
@@ -304,24 +287,32 @@ export default function ProfileScreen({ navigation }) {
         </TouchableOpacity>
       </LinearGradient>
 
-      {/* Stats Grid */}
+      {/* Stats Grid - Real Data */}
       <View style={styles.statsContainer}>
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
+          <TouchableOpacity 
+            style={styles.statCard}
+            onPress={handleViewEvents}
+            activeOpacity={0.7}
+          >
             <View style={styles.statIconContainer}>
               <Ionicons name="gift" size={24} color="#FF6B6B" />
             </View>
             <Text style={styles.statValue}>{stats.eventsCreated}</Text>
             <Text style={styles.statLabel}>Events Created</Text>
-          </View>
+          </TouchableOpacity>
           
-          <View style={styles.statCard}>
+          <TouchableOpacity 
+            style={styles.statCard}
+            onPress={handleViewEvents}
+            activeOpacity={0.7}
+          >
             <View style={styles.statIconContainer}>
               <Ionicons name="heart" size={24} color="#4ECDC4" />
             </View>
             <Text style={styles.statValue}>{stats.eventsContributed}</Text>
             <Text style={styles.statLabel}>Contributed To</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.statsRow}>
@@ -357,7 +348,7 @@ export default function ProfileScreen({ navigation }) {
           <View style={styles.actionContent}>
             <Text style={styles.actionTitle}>My Investment Events</Text>
             <Text style={styles.actionSubtitle}>
-              View and manage your events
+              {stats.eventsCreated} events created
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color="#CCC" />
@@ -462,7 +453,7 @@ export default function ProfileScreen({ navigation }) {
         </LinearGradient>
       </TouchableOpacity>
 
-      {/* App Version & API Info */}
+      {/* App Version */}
       <Text style={styles.versionText}>Version 1.0.0</Text>
       {__DEV__ && (
         <Text style={styles.apiText}>API: {API_URL}</Text>

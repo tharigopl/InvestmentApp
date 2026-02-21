@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 
+//Import model
+const Event = require('../models/event-participant');
+
 // Import controller
 const eventController = require('../controllers/event-controllers');
 
@@ -10,7 +13,7 @@ const checkAuth = require('../middleware/check-auth');
 // ============================================
 // EVENT ROUTES
 // ============================================
-
+router.get('/user/:userId', checkAuth, eventController.getUserEvents);
 // Get all events (with optional filters)
 // Query params: ?status=active&limit=20&skip=0
 router.get('/', checkAuth, eventController.getEvents);
@@ -53,5 +56,8 @@ router.get('/:eventId/funds-summary', checkAuth, eventController.getFundsSummary
 router.post('/:eventId/initiate-withdrawal', checkAuth, eventController.initiateWithdrawal);
 
 router.post('/:eventId/mark-purchased', checkAuth, eventController.markStocksPurchased);
+
+
+
 
 module.exports = router;

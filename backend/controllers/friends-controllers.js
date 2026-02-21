@@ -7,6 +7,8 @@ const HttpError = require('../models/http-error');
 const Friend = require('../models/friend');
 const User = require('../models/user');
 
+
+
 // ============================================
 // HELPER: Extract User ID (handles nested structure)
 // ============================================
@@ -215,23 +217,23 @@ const getFriendsByUserId = async (req, res, next) => {
 // ============================================
 // GET FRIEND BY ID
 // ============================================
-const getFriendById = async (req, res, next) => {
-  console.log("Get Friend By ID:", req.params.friendid);
-  const friendId = req.params.friendid;
+// const getFriendById = async (req, res, next) => {
+//   console.log("Get Friend By ID:", req.params.friendid);
+//   const friendId = req.params.friendid;
 
-  try {
-    const friend = await Friend.findById(friendId);
+//   try {
+//     const friend = await Friend.findById(friendId);
     
-    if (!friend) {
-      return res.status(404).json({ message: 'Friend not found' });
-    }
+//     if (!friend) {
+//       return res.status(404).json({ message: 'Friend not found' });
+//     }
 
-    res.json({ friend: friend.toObject({ getters: true }) });
-  } catch (err) {
-    console.error('Get friend by ID error:', err);
-    return res.status(500).json({ message: 'Failed to fetch friend' });
-  }
-};
+//     res.json({ friend: friend.toObject({ getters: true }) });
+//   } catch (err) {
+//     console.error('Get friend by ID error:', err);
+//     return res.status(500).json({ message: 'Failed to fetch friend' });
+//   }
+// };
 
 // ============================================
 // CREATE FRIEND (External Contact)
@@ -485,6 +487,272 @@ const removeUserFriend = async (req, res, next) => {
   res.status(200).json({ message: 'Friend removed successfully.' });
 };
 
+/**
+ * GET /api/friends
+ * Get all friends for the authenticated user
+ */
+const getFriends = async (req, res, next) => {
+  try {
+    const userId = req.userData.userId;
+    
+    console.log(`[getFriends] Fetching friends for user: ${userId}`);
+    
+    // METHOD 1: If you have a separate Friend model
+    /*
+    const friendships = await Friend.find({
+      $or: [
+        { user: userId },
+        { friend: userId }
+      ]
+    })
+    .populate('user', 'fname lname email profileImage')
+    .populate('friend', 'fname lname email profileImage');
+    
+    const friendsList = friendships.map(f => {
+      const friendUser = f.user._id.toString() === userId ? f.friend : f.user;
+      return {
+        _id: friendUser._id,
+        id: friendUser._id,
+        name: `${friendUser.fname} ${friendUser.lname}`,
+        firstName: friendUser.fname,
+        lastName: friendUser.lname,
+        email: friendUser.email,
+        profileImage: friendUser.profileImage,
+        type: 'user',
+        isRegistered: true
+      };
+    });
+    */
+    
+    // METHOD 2: If friends are stored in User model as an array
+    const user = await User.findById(userId)
+      .populate('friends', 'fname lname email profileImage');
+    
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found'
+      });
+    }
+    
+    const friendsList = (user.friends || []).map(friend => ({
+      _id: friend._id,
+      id: friend._id,
+      name: `${friend.fname} ${friend.lname}`,
+      firstName: friend.fname,
+      lastName: friend.lname,
+      email: friend.email,
+      profileImage: friend.profileImage,
+      type: 'user',
+      isRegistered: true
+    }));
+    
+    console.log(`[getFriends] Found ${friendsList.length} friends for user ${userId}`);
+    
+    res.status(200).json({
+      friends: friendsList,
+      count: friendsList.length
+    });
+  } catch (error) {
+    console.error('[getFriends] Error:', error);
+    res.status(500).json({
+      message: 'Failed to fetch friends',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * POST /api/friends
+ * Add a new friend
+ */
+const addFriend = async (req, res, next) => {
+  try {
+    const userId = req.userData.userId;
+    const { friendId } = req.body;
+    
+    console.log(`[addFriend] User ${userId} adding friend ${friendId}`);
+    
+    if (!friendId) {
+      return res.status(400).json({
+        message: 'Friend ID is required'
+      });
+    }
+    
+    // Validate friend exists
+    const friendUser = await User.findById(friendId);
+    if (!friendUser) {
+      return res.status(404).json({
+        message: 'User not found'
+      });
+    }
+    
+    // Check if already friends (if using Friend model)
+    /*
+    const existingFriend = await Friend.findOne({
+      $or: [
+        { user: userId, friend: friendId },
+        { user: friendId, friend: userId }
+      ]
+    });
+    
+    if (existingFriend) {
+      return res.status(400).json({
+        message: 'Already friends with this user'
+      });
+    }
+    
+    // Create friendship
+    const newFriend = new Friend({
+      user: userId,
+      friend: friendId,
+      status: 'accepted',
+      createdAt: new Date()
+    });
+    
+    await newFriend.save();
+    */
+    
+    // METHOD 2: If using User.friends array
+    const user = await User.findById(userId);
+    
+    if (user.friends.includes(friendId)) {
+      return res.status(400).json({
+        message: 'Already friends with this user'
+      });
+    }
+    
+    user.friends.push(friendId);
+    await user.save();
+    
+    console.log(`[addFriend] Successfully added friend`);
+    
+    res.status(201).json({
+      message: 'Friend added successfully',
+      friend: {
+        _id: friendUser._id,
+        name: `${friendUser.fname} ${friendUser.lname}`,
+        email: friendUser.email,
+        profileImage: friendUser.profileImage
+      }
+    });
+  } catch (error) {
+    console.error('[addFriend] Error:', error);
+    res.status(500).json({
+      message: 'Failed to add friend',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * DELETE /api/friends/:friendId
+ * Remove a friend
+ */
+const removeFriend = async (req, res, next) => {
+  try {
+    const userId = req.userData.userId;
+    const { friendId } = req.params;
+    
+    console.log(`[removeFriend] User ${userId} removing friend ${friendId}`);
+    
+    // METHOD 1: If using Friend model
+    /*
+    const deleted = await Friend.findOneAndDelete({
+      $or: [
+        { user: userId, friend: friendId },
+        { user: friendId, friend: userId }
+      ]
+    });
+    
+    if (!deleted) {
+      return res.status(404).json({
+        message: 'Friendship not found'
+      });
+    }
+    */
+    
+    // METHOD 2: If using User.friends array
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found'
+      });
+    }
+    
+    const friendIndex = user.friends.indexOf(friendId);
+    
+    if (friendIndex === -1) {
+      return res.status(404).json({
+        message: 'Friend not found in your friend list'
+      });
+    }
+    
+    user.friends.splice(friendIndex, 1);
+    await user.save();
+    
+    console.log(`[removeFriend] Successfully removed friend`);
+    
+    res.status(200).json({
+      message: 'Friend removed successfully'
+    });
+  } catch (error) {
+    console.error('[removeFriend] Error:', error);
+    res.status(500).json({
+      message: 'Failed to remove friend',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * GET /api/friends/:friendId
+ * Get details of a specific friend
+ */
+const getFriendById = async (req, res, next) => {
+  try {
+    const userId = req.userData.userId;
+    const { friendId } = req.params;
+    
+    console.log(`[getFriendById] User ${userId} fetching friend ${friendId}`);
+    
+    const user = await User.findById(userId);
+    
+    if (!user || !user.friends.includes(friendId)) {
+      return res.status(404).json({
+        message: 'Friend not found in your friend list'
+      });
+    }
+    
+    const friend = await User.findById(friendId, 'fname lname email profileImage');
+    
+    if (!friend) {
+      return res.status(404).json({
+        message: 'User not found'
+      });
+    }
+    
+    res.status(200).json({
+      friend: {
+        _id: friend._id,
+        id: friend._id,
+        name: `${friend.fname} ${friend.lname}`,
+        firstName: friend.fname,
+        lastName: friend.lname,
+        email: friend.email,
+        profileImage: friend.profileImage,
+        type: 'user',
+        isRegistered: true
+      }
+    });
+  } catch (error) {
+    console.error('[getFriendById] Error:', error);
+    res.status(500).json({
+      message: 'Failed to fetch friend details',
+      error: error.message
+    });
+  }
+};
 
 // ============================================
 // EXPORTS
@@ -498,5 +766,8 @@ module.exports = {
   deleteFriend,
   getAllFriendsForUser,
   removeUserFriend,
-  addUserFriend
+  addUserFriend,
+  getFriends,
+  addFriend,
+  removeFriend,
 };

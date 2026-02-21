@@ -1060,6 +1060,160 @@ markStocksPurchased = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/events/user/:userId
+ * Get all events for a specific user (created by or contributed to)
+ */
+const getUserEvents = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    
+    console.log(`[getUserEvents] Fetching events for user: ${userId}`);
+    
+    // Find events where user is creator OR has contributed
+    const events = await InvestmentEvent.find({
+      $or: [
+        { createdBy: userId },          // ✅ Not "creator"
+        { recipientUser: userId },       
+        { 'contributors.user': userId }, // ✅ Not "contributions.contributor"
+        { invitedUsers: userId }         
+      ]
+    })
+    .populate('createdBy', 'fname lname email profileImage')
+    .populate('recipientUser', 'fname lname email profileImage')
+    .populate('contributors.user', 'fname lname email profileImage')
+    .populate('invitedUsers', 'fname lname email profileImage')
+    .sort({ createdAt: -1 });
+    
+    console.log(`[getUserEvents] Found ${events.length} events`);
+    
+    res.status(200).json({
+      events: events,
+      count: events.length
+    });
+  } catch (error) {
+    console.error('[getUserEvents] Error:', error);
+    res.status(500).json({
+      message: 'Failed to fetch user events',
+      error: error.message
+    });
+  }
+};
+
+// const getUserEvents = async (req, res, next) => {
+//   try {
+//     const { userId } = req.params;
+    
+//     console.log('='.repeat(60));
+//     console.log(`[getUserEvents] DEBUGGING - Fetching events for user: ${userId}`);
+//     console.log('='.repeat(60));
+    
+//     const Event = require('../models/investment-event');
+    
+//     // Step 1: Check total events in database
+//     const totalEvents = await Event.countDocuments();
+//     console.log(`📊 Total events in database: ${totalEvents}`);
+    
+//     // Step 2: Check if any events have this user as creator
+//     const eventsAsCreator = await Event.find({ createdBy: userId });
+//     console.log(`👤 Events where user is creator: ${eventsAsCreator.length}`);
+//     if (eventsAsCreator.length > 0) {
+//       console.log('Creator events:', eventsAsCreator.map(e => ({
+//         id: e._id,
+//         title: e.title || e.eventTitle,
+//         creator: e.creator
+//       })));
+//     }
+    
+//     // Step 3: Check if any events have contributions from this user
+//     const eventsWithContributions = await Event.find({
+//       'contributions.contributor': userId
+//     });
+//     console.log(`💰 Events where user contributed: ${eventsWithContributions.length}`);
+//     if (eventsWithContributions.length > 0) {
+//       console.log('Contribution events:', eventsWithContributions.map(e => ({
+//         id: e._id,
+//         title: e.title || e.eventTitle,
+//         contributions: e.contributions
+//       })));
+//     }
+    
+//     // Step 4: Get a sample event to check structure
+//     const sampleEvent = await Event.findOne();
+//     if (sampleEvent) {
+//       console.log('\n📝 Sample event structure:');
+//       console.log({
+//         _id: sampleEvent._id,
+//         title: sampleEvent.title || sampleEvent.eventTitle,
+//         creator: sampleEvent.creator,
+//         creatorType: typeof sampleEvent.creator,
+//         hasContributions: !!sampleEvent.contributions,
+//         contributionsLength: sampleEvent.contributions?.length || 0,
+//         sampleContribution: sampleEvent.contributions?.[0] || null
+//       });
+//     }
+    
+//     // Step 5: Try the actual query
+//     console.log('\n🔍 Running actual query with $or...');
+//     const events = await Event.find({
+//       $or: [
+//         { creator: userId },
+//         { 'contributions.contributor': userId }
+//       ]
+//     })
+//     .populate('creator', 'fname lname email profileImage')
+//     .populate('recipientUser', 'fname lname email profileImage')
+//     .populate('contributions.contributor', 'fname lname email profileImage')
+//     .sort({ createdAt: -1 });
+    
+//     console.log(`\n✅ Query result: Found ${events.length} events`);
+    
+//     if (events.length === 0) {
+//       console.log('\n⚠️ NO EVENTS FOUND - Possible reasons:');
+//       console.log('1. User ID might not match exactly (check ObjectId vs String)');
+//       console.log('2. Events might use different field names (recipientUserId instead of creator)');
+//       console.log('3. Contributions might have different structure');
+//       console.log('\nTrying alternative queries...\n');
+      
+//       // Try with string conversion
+//       const eventsWithString = await Event.find({
+//         $or: [
+//           { creator: userId.toString() },
+//           { 'contributions.contributor': userId.toString() }
+//         ]
+//       });
+//       console.log(`📌 With .toString(): ${eventsWithString.length} events`);
+      
+//       // Try checking recipientUserId field
+//       const eventsWithRecipient = await Event.find({ recipientUserId: userId });
+//       console.log(`📌 With recipientUserId: ${eventsWithRecipient.length} events`);
+      
+//       // Try checking recipientUser field
+//       const eventsWithRecipientUser = await Event.find({ recipientUser: userId });
+//       console.log(`📌 With recipientUser: ${eventsWithRecipientUser.length} events`);
+//     }
+    
+//     console.log('='.repeat(60));
+    
+//     res.status(200).json({
+//       events: events,
+//       count: events.length,
+//       debug: {
+//         userId: userId,
+//         totalEventsInDB: totalEvents,
+//         eventsAsCreator: eventsAsCreator.length,
+//         eventsWithContributions: eventsWithContributions.length
+//       }
+//     });
+//   } catch (error) {
+//     console.error('[getUserEvents] Error:', error);
+//     res.status(500).json({
+//       message: 'Failed to fetch user events',
+//       error: error.message
+//     });
+//   }
+// };
+
 // ============================================
 // EXPORTS
 // ============================================
@@ -1080,4 +1234,5 @@ module.exports = {
   getFundsSummary,
   initiateWithdrawal,
   markStocksPurchased,
+  getUserEvents,
 };

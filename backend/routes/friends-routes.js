@@ -1,7 +1,12 @@
 const express = require('express');
 const { check } = require('express-validator');
 
+//Import model
+const User = require('../models/user');
+const Friend = require('../models/friend');
+
 const friendsControllers = require('../controllers/friends-controllers');
+
 const fileUpload = require('../middleware/file-upload');
 const checkAuth = require('../middleware/check-auth');
 
@@ -22,7 +27,8 @@ router.get('/user/:userid', friendsControllers.getFriendsByUserId);
  * GET /api/friends/:friendid
  * NOTE: This MUST come after /user/:userid or "user" will be treated as a friendid
  */
-router.get('/:friendid', friendsControllers.getFriendById);
+//router.get('/:friendid', friendsControllers.getFriendById);
+router.get('/:friendId', checkAuth, friendsControllers.getFriendById);
 
 // ============================================
 // PROTECTED ROUTES (Auth required)
@@ -101,5 +107,10 @@ router.delete('/user/:friendUserId', friendsControllers.removeUserFriend);
  * DELETE /api/friends/:friendid
  */
 router.delete('/:friendid', friendsControllers.deleteFriend);
+
+router.get('/', checkAuth, friendsControllers.getFriends);
+router.post('/', checkAuth, friendsControllers.addFriend);
+
+router.delete('/:friendId', checkAuth, friendsControllers.removeFriend);
 
 module.exports = router;
