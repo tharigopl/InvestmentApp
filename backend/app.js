@@ -58,6 +58,7 @@ app.use(bodyParser.json());
 
 // Serve static files (uploaded images)
 app.use("/uploads/images", express.static(path.join("uploads", "images")));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // CORS configuration
 const allowedOrigins = [

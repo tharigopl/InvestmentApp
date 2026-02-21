@@ -26,7 +26,12 @@ const userSchema = new Schema({
   
   // Personal Information
   dateofbirth: { type: Date, required: false },
-  profileImage: { type: String, required: false }, // URL to profile picture
+  //profileImage: { type: String, required: false }, // URL to profile picture
+  profileImage: {
+    type: String,
+    default: null,
+    trim: true,
+  },
   
   // Investment Profile
   investmentProfile: {

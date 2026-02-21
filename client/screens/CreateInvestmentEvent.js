@@ -1,4 +1,4 @@
-// client/screens/CreateInvestmentEvent.js - FIXED (Web-compatible date picker)
+// client/screens/CreateInvestmentEvent.js - UPDATED WITH NEW THEME
 import React, { useState } from 'react';
 import {
   View,
@@ -13,9 +13,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { GlobalStyles } from '../constants/styles';
 import StockPicker from '../components/StockPicker';
 import FriendSelector from '../components/FriendSelector';
 import { createEvent } from '../util/events';
@@ -60,13 +60,22 @@ const EventTypeStep = ({ selected, onSelect, onNext }) => {
         ))}
       </View>
 
+      {/* Next Button with Gradient */}
       <TouchableOpacity
-        style={[styles.nextButton, !selected && styles.nextButtonDisabled]}
+        style={[styles.nextButtonContainer, !selected && styles.buttonDisabled]}
         onPress={onNext}
         disabled={!selected}
+        activeOpacity={0.8}
       >
-        <Text style={styles.nextButtonText}>Next</Text>
-        <Ionicons name="arrow-forward" size={20} color="#fff" />
+        <LinearGradient
+          colors={!selected ? ['#CCC', '#AAA'] : ['#FF6B6B', '#FF8E53']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.buttonGradient}
+        >
+          <Text style={styles.buttonText}>Next</Text>
+          <Ionicons name="arrow-forward" size={20} color="#fff" />
+        </LinearGradient>
       </TouchableOpacity>
     </View>
   );
@@ -74,7 +83,6 @@ const EventTypeStep = ({ selected, onSelect, onNext }) => {
 
 /**
  * Step 2: Event Details & Recipient
- *  FIXED: Web-compatible date picker
  */
 const RecipientStep = ({ data, onChange, onNext, onBack }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -86,7 +94,6 @@ const RecipientStep = ({ data, onChange, onNext, onBack }) => {
     }
   };
 
-  //  FIX: Web-compatible date input
   const handleWebDateChange = (event) => {
     const dateValue = event.target.value;
     if (dateValue) {
@@ -111,42 +118,42 @@ const RecipientStep = ({ data, onChange, onNext, onBack }) => {
           <TextInput
             style={styles.input}
             placeholder="e.g., Sarah's 30th Birthday"
+            placeholderTextColor="#999"
             value={data.eventTitle}
             onChangeText={(text) => onChange({ ...data, eventTitle: text })}
           />
         </View>
 
-        {/* Event Date -  FIXED: Web-compatible */}
+        {/* Event Date */}
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Event Date</Text>
           
           {Platform.OS === 'web' ? (
-            //  WEB: Use HTML5 date input
             <input
               type="date"
               value={data.eventDate.toISOString().split('T')[0]}
               onChange={handleWebDateChange}
               min={new Date().toISOString().split('T')[0]}
               style={{
-                backgroundColor: GlobalStyles.colors.gray100,
-                borderRadius: 12,
-                padding: 14,
+                backgroundColor: '#fff',
+                borderRadius: 14,
+                padding: 16,
                 fontSize: 16,
-                color: GlobalStyles.colors.gray800,
-                border: 'none',
+                color: '#333',
+                border: '2px solid #E0E0E0',
                 outline: 'none',
                 width: '100%',
                 fontFamily: 'inherit',
+                fontWeight: '500',
               }}
             />
           ) : (
-            //  MOBILE: Use native date picker
             <>
               <TouchableOpacity
                 style={styles.dateButton}
                 onPress={() => setShowDatePicker(true)}
               >
-                <Ionicons name="calendar-outline" size={20} color={GlobalStyles.colors.gray600} />
+                <Ionicons name="calendar-outline" size={20} color="#666" />
                 <Text style={styles.dateButtonText}>
                   {data.eventDate.toLocaleDateString('en-US', {
                     month: 'long',
@@ -176,6 +183,7 @@ const RecipientStep = ({ data, onChange, onNext, onBack }) => {
             <TextInput
               style={styles.amountInput}
               placeholder="100"
+              placeholderTextColor="#999"
               value={data.targetAmount}
               onChangeText={(text) => onChange({ ...data, targetAmount: text })}
               keyboardType="decimal-pad"
@@ -192,6 +200,7 @@ const RecipientStep = ({ data, onChange, onNext, onBack }) => {
           <TextInput
             style={[styles.input, styles.textArea]}
             placeholder="Add a personal message..."
+            placeholderTextColor="#999"
             value={data.description}
             onChangeText={(text) => onChange({ ...data, description: text })}
             multiline
@@ -201,18 +210,26 @@ const RecipientStep = ({ data, onChange, onNext, onBack }) => {
 
         {/* Buttons */}
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <Ionicons name="arrow-back" size={20} color={GlobalStyles.colors.gray700} />
+          <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={20} color="#666" />
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.nextButton, !isValid && styles.nextButtonDisabled]}
+            style={[styles.nextButtonContainer, !isValid && styles.buttonDisabled]}
             onPress={onNext}
             disabled={!isValid}
+            activeOpacity={0.8}
           >
-            <Text style={styles.nextButtonText}>Next</Text>
-            <Ionicons name="arrow-forward" size={20} color="#fff" />
+            <LinearGradient
+              colors={!isValid ? ['#CCC', '#AAA'] : ['#FF6B6B', '#FF8E53']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.buttonGradient}
+            >
+              <Text style={styles.buttonText}>Next</Text>
+              <Ionicons name="arrow-forward" size={20} color="#fff" />
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -241,7 +258,7 @@ const InvestmentSelectionStep = ({ data, onChange, onNext, onBack }) => {
         />
 
         <View style={styles.infoBox}>
-          <Ionicons name="information-circle-outline" size={24} color={GlobalStyles.colors.primary600} />
+          <Ionicons name="information-circle" size={24} color="#4ECDC4" />
           <Text style={styles.infoText}>
             The recipient will be able to choose how to allocate the target amount among these investments
           </Text>
@@ -249,18 +266,26 @@ const InvestmentSelectionStep = ({ data, onChange, onNext, onBack }) => {
 
         {/* Buttons */}
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <Ionicons name="arrow-back" size={20} color={GlobalStyles.colors.gray700} />
+          <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={20} color="#666" />
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.nextButton, !isValid && styles.nextButtonDisabled]}
+            style={[styles.nextButtonContainer, !isValid && styles.buttonDisabled]}
             onPress={onNext}
             disabled={!isValid}
+            activeOpacity={0.8}
           >
-            <Text style={styles.nextButtonText}>Next</Text>
-            <Ionicons name="arrow-forward" size={20} color="#fff" />
+            <LinearGradient
+              colors={!isValid ? ['#CCC', '#AAA'] : ['#FF6B6B', '#FF8E53']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.buttonGradient}
+            >
+              <Text style={styles.buttonText}>Next</Text>
+              <Ionicons name="arrow-forward" size={20} color="#fff" />
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -280,7 +305,6 @@ const InviteContributorsStep = ({ data, onChange, onCreate, onBack }) => {
     setIsCreating(true);
     try {
       await onCreate();
-      // ✅ Success - onCreate navigates away, but reset state just in case
       setIsCreating(false);
     } catch (error) {
       setIsCreating(false);
@@ -288,99 +312,113 @@ const InviteContributorsStep = ({ data, onChange, onCreate, onBack }) => {
     }
   };
 
-  // ✅ DEBUG: Log when component renders
   console.log("📍 Step 4 (InviteContributorsStep) rendered");
 
   return (
     <View style={styles.stepContainer}>
-      {/* Scrollable content */}
       <ScrollView 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
       >
         <Text style={styles.stepTitle}>Invite Contributors</Text>
         <Text style={styles.stepSubtitle}>
-          Choose friends who can contribute to this investment gift
+          Choose friends to help fund this gift (optional)
         </Text>
 
         <FriendSelector
           selectedFriends={data.invitedUsers}
           onFriendsChange={(friends) => onChange({ ...data, invitedUsers: friends })}
-          maxSelections={50}
         />
 
         <View style={styles.infoBox}>
-          <Ionicons name="gift-outline" size={24} color={GlobalStyles.colors.primary600} />
+          <Ionicons name="people" size={24} color="#FFD93D" />
           <Text style={styles.infoText}>
-            You can also share the event link later to invite more people
+            You can skip this step and share the event link later
           </Text>
         </View>
 
         {/* Summary */}
         <View style={styles.summaryBox}>
-          <Text style={styles.summaryTitle}>Event Summary</Text>
+          <Text style={styles.summaryTitle}>📋 Event Summary</Text>
+          
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Type:</Text>
+            <Text style={styles.summaryLabel}>Event Type:</Text>
             <Text style={styles.summaryValue}>
               {EVENT_TYPES.find(t => t.value === data.eventType)?.label}
             </Text>
           </View>
+
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Title:</Text>
             <Text style={styles.summaryValue}>{data.eventTitle}</Text>
           </View>
+
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Target:</Text>
-            <Text style={styles.summaryValue}>${data.targetAmount}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Stocks:</Text>
+            <Text style={styles.summaryLabel}>Date:</Text>
             <Text style={styles.summaryValue}>
-              {data.selectedInvestments.map(s => s.symbol).join(', ')}
+              {data.eventDate.toLocaleDateString('en-US', {
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+              })}
             </Text>
           </View>
+
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Invites:</Text>
-            <Text style={styles.summaryValue}>{data.invitedUsers.length} friends</Text>
+            <Text style={styles.summaryLabel}>Target Amount:</Text>
+            <Text style={[styles.summaryValue, { color: '#4ECDC4', fontWeight: '800' }]}>
+              ${parseFloat(data.targetAmount || 0).toFixed(2)}
+            </Text>
+          </View>
+
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Investments:</Text>
+            <Text style={styles.summaryValue}>
+              {data.selectedInvestments.length} selected
+            </Text>
+          </View>
+
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Contributors:</Text>
+            <Text style={styles.summaryValue}>
+              {data.invitedUsers.length} invited
+            </Text>
           </View>
         </View>
       </ScrollView>
 
-      {/* ✅ FIXED: Sticky bottom bar - always visible */}
-      <View style={[styles.stickyBottomBar, { zIndex: 999 }]}>
+      {/* Sticky Bottom Buttons */}
+      <View style={styles.stickyBottomBar}>
         <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => {
-            console.log("⬅️ Back button clicked");
-            onBack();
-          }}
-          disabled={isCreating}
+          style={[styles.backButton, { flex: 1 }]} 
+          onPress={onBack} 
+          activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={20} color={GlobalStyles.colors.gray700} />
+          <Ionicons name="arrow-back" size={20} color="#666" />
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.createButton, isCreating && styles.createButtonDisabled]}
-          onPress={() => {
-            console.log("✅ Create Event button clicked (from TouchableOpacity)");
-            handleCreate();
-          }}
+          style={[styles.createButtonContainer, { flex: 1 }]}
+          onPress={handleCreate}
           disabled={isCreating}
+          activeOpacity={0.8}
         >
-          {isCreating ? (
-            <>
-              <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.createButtonText}>Creating...</Text>
-            </>
-          ) : (
-            <>
-              <Ionicons name="checkmark-circle" size={22} color="#fff" />
-              <Text style={styles.createButtonText}>
-                Create Event {data.invitedUsers.length > 0 && `(${data.invitedUsers.length} invited)`}
-              </Text>
-            </>
-          )}
+          <LinearGradient
+            colors={['#4ECDC4', '#44A08D']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.buttonGradient}
+          >
+            {isCreating ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle" size={24} color="#fff" />
+                <Text style={styles.buttonText}>Create Event</Text>
+              </>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     </View>
@@ -391,7 +429,7 @@ const InviteContributorsStep = ({ data, onChange, onCreate, onBack }) => {
  * Main Component
  */
 export default function CreateInvestmentEvent({ navigation }) {
-  const [step, setStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(1);
   const [eventData, setEventData] = useState({
     eventType: '',
     eventTitle: '',
@@ -402,110 +440,124 @@ export default function CreateInvestmentEvent({ navigation }) {
     invitedUsers: [],
   });
 
-  const handleCreate = async () => {
-    try {
-      console.log('🟢 Creating event with data:', eventData);
-      
-      // ✅ FIXED: Use 'uid' key instead of 'userId'
-      const userId = await AsyncStorage.getItem('uid');
-      console.log('📋 User ID from AsyncStorage:', userId);
-      
-      if (!userId) {
-        Alert.alert('Error', 'User not logged in. Please log in again.');
-        throw new Error('User ID not found in AsyncStorage');
-      }
-      
-      // Calculate contribution deadline (7 days before event by default)
-      const contributionDeadline = new Date(eventData.eventDate);
-      contributionDeadline.setDate(contributionDeadline.getDate() - 7);
-      
-      // Prepare data for API - match backend field names exactly
-      const apiData = {
-        eventType: eventData.eventType,
-        eventTitle: eventData.eventTitle,
-        recipientUserId: userId,
-        eventDate: eventData.eventDate.toISOString(),
-        eventDescription: eventData.description || '',
-        targetAmount: parseFloat(eventData.targetAmount),
-        contributionDeadline: contributionDeadline.toISOString(),
-        selectedInvestments: eventData.selectedInvestments.map(s => ({
-          symbol: s.symbol,
-          name: s.name,
-          type: s.type,
-        })),
-        invitedUsers: eventData.invitedUsers.map(u => u.id || u._id),
-      };
-
-      console.log('📤 Sending to API:', apiData);
-      console.log('📤 Field check:', {
-        hasEventType: !!apiData.eventType,
-        hasEventTitle: !!apiData.eventTitle,
-        hasRecipientUserId: !!apiData.recipientUserId,
-        hasEventDate: !!apiData.eventDate,
-        hasTargetAmount: !!apiData.targetAmount,
-        hasContributionDeadline: !!apiData.contributionDeadline,
-      });
-      
-      // ✅ FIXED: createEvent no longer needs token - apiClient handles auth
-      const result = await createEvent(apiData);
-      
-      console.log('✅ Event created successfully:', result);
-      
-      // ✅ Go back - HomeScreen will reload via useEffect when it comes into focus
-      navigation.goBack();
-      
-      // Show success message after navigation
-      setTimeout(() => {
-        Alert.alert(
-          'Success!',
-          'Your investment event has been created successfully.'
-        );
-      }, 500);
-      
-    } catch (error) {
-      console.error('❌ Create event error:', error);
-      console.error('Error message:', error.message);
-      console.error('Error response:', error.response?.data);
-      console.error('Error status:', error.response?.status);
-      Alert.alert(
-        'Error',
-        error.response?.data?.message || error.message || 'Failed to create event. Please try again.'
-      );
-      throw error; // Re-throw so step component knows
+  const handleNext = () => {
+    if (currentStep < 4) {
+      setCurrentStep(currentStep + 1);
     }
   };
+
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  // CORRECTED handleCreate function for CreateInvestmentEvent-UPDATED.js
+// This matches the OLD WORKING version's field names
+
+const handleCreate = async () => {
+  try {
+    console.log('🟢 Creating event with data:', eventData);
+    
+    // ✅ Use 'uid' key (not 'userId')
+    const userId = await AsyncStorage.getItem('uid');
+    console.log('📋 User ID from AsyncStorage:', userId);
+    
+    if (!userId) {
+      Alert.alert('Error', 'User not logged in. Please log in again.');
+      throw new Error('User ID not found in AsyncStorage');
+    }
+    
+    // Calculate contribution deadline (7 days before event by default)
+    const contributionDeadline = new Date(eventData.eventDate);
+    contributionDeadline.setDate(contributionDeadline.getDate() - 7);
+    
+    // ✅ CRITICAL: Match backend field names EXACTLY as in old version
+    const apiData = {
+      eventType: eventData.eventType,
+      eventTitle: eventData.eventTitle,
+      recipientUserId: userId, // ✅ Backend expects "recipientUserId" not "recipientUser"
+      eventDate: eventData.eventDate.toISOString(),
+      eventDescription: eventData.description || '', // ✅ Backend expects "eventDescription" not "description"
+      targetAmount: parseFloat(eventData.targetAmount),
+      contributionDeadline: contributionDeadline.toISOString(),
+      selectedInvestments: eventData.selectedInvestments.map(s => ({
+        symbol: s.symbol,
+        name: s.name,
+        type: s.type || 'stock',
+      })),
+      invitedUsers: eventData.invitedUsers.map(u => u.id || u._id), // ✅ Backend expects "invitedUsers" not "selectedFriends"
+    };
+
+    console.log('📤 Sending to API:', apiData);
+    console.log('📤 Field check:', {
+      hasEventType: !!apiData.eventType,
+      hasEventTitle: !!apiData.eventTitle,
+      hasRecipientUserId: !!apiData.recipientUserId,
+      hasEventDate: !!apiData.eventDate,
+      hasTargetAmount: !!apiData.targetAmount,
+      hasContributionDeadline: !!apiData.contributionDeadline,
+    });
+    
+    // ✅ createEvent uses apiClient which handles auth automatically
+    const result = await createEvent(apiData);
+    
+    console.log('✅ Event created successfully:', result);
+    
+    // Go back to previous screen
+    navigation.goBack();
+    
+    // Show success message after navigation
+    setTimeout(() => {
+      Alert.alert(
+        'Success! 🎉',
+        'Your investment event has been created successfully.'
+      );
+    }, 500);
+    
+  } catch (error) {
+    console.error('❌ Create event error:', error);
+    console.error('Error message:', error.message);
+    console.error('Error response:', error.response?.data);
+    console.error('Error status:', error.response?.status);
+    Alert.alert(
+      'Error',
+      error.response?.data?.message || 'Failed to create event. Please try again.'
+    );
+  }
+};
 
   return (
     <View style={styles.container}>
       {/* Progress Indicator */}
       <View style={styles.progressContainer}>
-        {[1, 2, 3, 4].map((num) => (
-          <View key={num} style={styles.progressItemContainer}>
+        {[1, 2, 3, 4].map((step, index) => (
+          <View key={step} style={styles.progressItemContainer}>
             <View
               style={[
                 styles.progressDot,
-                step >= num && styles.progressDotActive,
-                step > num && styles.progressDotCompleted,
+                currentStep >= step && styles.progressDotActive,
+                currentStep > step && styles.progressDotCompleted,
               ]}
             >
-              {step > num ? (
-                <Ionicons name="checkmark" size={16} color="#fff" />
+              {currentStep > step ? (
+                <Ionicons name="checkmark" size={18} color="#fff" />
               ) : (
                 <Text
                   style={[
                     styles.progressNumber,
-                    step >= num && styles.progressNumberActive,
+                    currentStep >= step && styles.progressNumberActive,
                   ]}
                 >
-                  {num}
+                  {step}
                 </Text>
               )}
             </View>
-            {num < 4 && (
+            {index < 3 && (
               <View
                 style={[
                   styles.progressLine,
-                  step > num && styles.progressLineActive,
+                  currentStep > step && styles.progressLineActive,
                 ]}
               />
             )}
@@ -514,42 +566,42 @@ export default function CreateInvestmentEvent({ navigation }) {
       </View>
 
       {/* Step Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {step === 1 && (
+      <View style={styles.content}>
+        {currentStep === 1 && (
           <EventTypeStep
             selected={eventData.eventType}
             onSelect={(type) => setEventData({ ...eventData, eventType: type })}
-            onNext={() => setStep(2)}
+            onNext={handleNext}
           />
         )}
 
-        {step === 2 && (
+        {currentStep === 2 && (
           <RecipientStep
             data={eventData}
             onChange={setEventData}
-            onNext={() => setStep(3)}
-            onBack={() => setStep(1)}
+            onNext={handleNext}
+            onBack={handleBack}
           />
         )}
 
-        {step === 3 && (
+        {currentStep === 3 && (
           <InvestmentSelectionStep
             data={eventData}
             onChange={setEventData}
-            onNext={() => setStep(4)}
-            onBack={() => setStep(2)}
+            onNext={handleNext}
+            onBack={handleBack}
           />
         )}
 
-        {step === 4 && (
+        {currentStep === 4 && (
           <InviteContributorsStep
             data={eventData}
             onChange={setEventData}
             onCreate={handleCreate}
-            onBack={() => setStep(3)}
+            onBack={handleBack}
           />
         )}
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -557,7 +609,7 @@ export default function CreateInvestmentEvent({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF9F0',
   },
   progressContainer: {
     flexDirection: 'row',
@@ -566,107 +618,114 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     paddingHorizontal: 20,
     backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: GlobalStyles.colors.gray200,
+    borderBottomWidth: 2,
+    borderBottomColor: '#FFE5B4',
   },
   progressItemContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   progressDot: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: GlobalStyles.colors.gray200,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E0E0E0',
     justifyContent: 'center',
     alignItems: 'center',
   },
   progressDotActive: {
-    backgroundColor: GlobalStyles.colors.primary500,
+    backgroundColor: '#FF6B6B',
   },
   progressDotCompleted: {
-    backgroundColor: GlobalStyles.colors.success500,
+    backgroundColor: '#4ECDC4',
   },
   progressNumber: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: GlobalStyles.colors.gray500,
+    fontWeight: '800',
+    color: '#999',
   },
   progressNumberActive: {
     color: '#fff',
   },
   progressLine: {
     width: 40,
-    height: 2,
-    backgroundColor: GlobalStyles.colors.gray200,
+    height: 3,
+    backgroundColor: '#E0E0E0',
     marginHorizontal: 4,
   },
   progressLineActive: {
-    backgroundColor: GlobalStyles.colors.success500,
+    backgroundColor: '#4ECDC4',
   },
   content: {
     flex: 1,
   },
   stepContainer: {
     flex: 1,
+    padding: 20,
   },
   stepTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: GlobalStyles.colors.gray800,
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#333',
     marginBottom: 8,
-    paddingHorizontal: 20,
   },
   stepSubtitle: {
     fontSize: 16,
-    color: GlobalStyles.colors.gray600,
+    color: '#666',
     marginBottom: 24,
-    paddingHorizontal: 20,
+    lineHeight: 24,
   },
   eventTypesContainer: {
     marginBottom: 32,
   },
   eventTypeButton: {
-    paddingVertical: 16,
+    paddingVertical: 18,
     paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: GlobalStyles.colors.gray100,
+    borderRadius: 16,
+    backgroundColor: '#fff',
     marginBottom: 12,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   eventTypeButtonSelected: {
-    backgroundColor: GlobalStyles.colors.primary50,
-    borderColor: GlobalStyles.colors.primary500,
+    backgroundColor: '#FFF5F5',
+    borderColor: '#FF6B6B',
   },
   eventTypeLabel: {
     fontSize: 18,
     fontWeight: '600',
-    color: GlobalStyles.colors.gray700,
+    color: '#333',
     textAlign: 'center',
   },
   eventTypeLabelSelected: {
-    color: GlobalStyles.colors.primary700,
+    fontWeight: '800',
+    color: '#FF6B6B',
   },
   inputGroup: {
     marginBottom: 20,
   },
   inputLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: GlobalStyles.colors.gray700,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#333',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: GlobalStyles.colors.gray100,
-    borderRadius: 12,
-    paddingVertical: 14,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    paddingVertical: 16,
     paddingHorizontal: 16,
     fontSize: 16,
-    color: GlobalStyles.colors.gray800,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    outlineStyle: 'none', //  FIX: Remove web outline
+    color: '#333',
+    fontWeight: '500',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    outlineStyle: 'none',
   },
   textArea: {
     height: 100,
@@ -675,80 +734,95 @@ const styles = StyleSheet.create({
   dateButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: GlobalStyles.colors.gray100,
-    borderRadius: 12,
-    paddingVertical: 14,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    paddingVertical: 16,
     paddingHorizontal: 16,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
   },
   dateButtonText: {
     fontSize: 16,
-    color: GlobalStyles.colors.gray800,
+    color: '#333',
+    fontWeight: '500',
     marginLeft: 12,
   },
   amountInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: GlobalStyles.colors.gray100,
-    borderRadius: 12,
-    paddingVertical: 14,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    paddingVertical: 16,
     paddingHorizontal: 16,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
   },
   currencySymbol: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: GlobalStyles.colors.gray700,
+    fontWeight: '800',
+    color: '#333',
     marginRight: 8,
   },
   amountInput: {
     flex: 1,
     fontSize: 16,
-    color: GlobalStyles.colors.gray800,
-    outlineStyle: 'none', //  FIX: Remove web outline
+    color: '#333',
+    fontWeight: '500',
+    outlineStyle: 'none',
   },
   inputHint: {
-    fontSize: 14,
-    color: GlobalStyles.colors.gray500,
+    fontSize: 13,
+    color: '#666',
     marginTop: 6,
+    lineHeight: 18,
   },
   infoBox: {
     flexDirection: 'row',
-    backgroundColor: GlobalStyles.colors.primary50,
-    borderRadius: 12,
+    backgroundColor: '#E8FFF8',
+    borderRadius: 16,
     padding: 16,
     marginVertical: 16,
+    borderWidth: 2,
+    borderColor: '#C4F5E8',
+    gap: 12,
   },
   infoText: {
     flex: 1,
     fontSize: 14,
-    color: GlobalStyles.colors.gray700,
-    marginLeft: 12,
+    color: '#0D7C66',
     lineHeight: 20,
+    fontWeight: '500',
   },
   summaryBox: {
-    backgroundColor: GlobalStyles.colors.gray50,
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
     marginVertical: 16,
+    borderWidth: 2,
+    borderColor: '#FFE5B4',
   },
   summaryTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: GlobalStyles.colors.gray800,
-    marginBottom: 12,
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#333',
+    marginBottom: 16,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
   },
   summaryLabel: {
     fontSize: 14,
-    color: GlobalStyles.colors.gray600,
+    fontWeight: '600',
+    color: '#666',
   },
   summaryValue: {
     fontSize: 14,
-    fontWeight: '600',
-    color: GlobalStyles.colors.gray800,
+    fontWeight: '700',
+    color: '#333',
     flex: 1,
     textAlign: 'right',
   },
@@ -762,77 +836,69 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    backgroundColor: GlobalStyles.colors.gray100,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
     flex: 1,
+    gap: 8,
   },
   backButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: GlobalStyles.colors.gray700,
-    marginLeft: 8,
+    fontWeight: '700',
+    color: '#666',
   },
-  nextButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    backgroundColor: GlobalStyles.colors.primary500,
+  nextButtonContainer: {
+    borderRadius: 14,
+    overflow: 'hidden',
     flex: 1,
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  nextButtonDisabled: {
-    backgroundColor: GlobalStyles.colors.gray400,
+  createButtonContainer: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    shadowColor: '#4ECDC4',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  nextButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginRight: 8,
-  },
-  createButton: {
+  buttonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    backgroundColor: GlobalStyles.colors.success500,
-    flex: 1,
     gap: 8,
   },
-  createButtonDisabled: {
-    backgroundColor: GlobalStyles.colors.gray400,
+  buttonText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#fff',
   },
-  createButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: GlobalStyles.colors.gray700,
+  buttonDisabled: {
+    opacity: 0.5,
+    shadowOpacity: 0,
   },
-  // ✅ NEW: Sticky bottom bar for Step 4 buttons
   stickyBottomBar: {
-    position: 'absolute',        // ✅ Force to bottom
-    bottom: 0,
-    left: 0,
-    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',  // ✅ RED - very obvious!
-    borderTopWidth: 0,
-    borderTopColor: '#000',
+    backgroundColor: '#fff',
+    borderTopWidth: 2,
+    borderTopColor: '#FFE5B4',
     gap: 12,
-    shadowColor: '#fff',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 999,
-    zIndex: 9999,
-    minHeight: 80,              // ✅ Force height
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
   },
 });

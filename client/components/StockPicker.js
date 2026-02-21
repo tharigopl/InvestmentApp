@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { GlobalStyles } from '../constants/styles';
 import { searchStocks, getTrendingStocks, getStockQuote } from '../util/stocks';
+import { LinearGradient } from 'expo-linear-gradient';
 
 /**
  * StockPicker Component
@@ -175,14 +176,21 @@ const StockPicker = ({ selectedStocks = [], onStocksChange, maxSelections = 5 })
       {/* Add Stock Button */}
       <TouchableOpacity
         style={[
-          styles.addButton,
+          styles.createButtonContainer, { flex: 1 },
           selectedStocks.length >= maxSelections && styles.addButtonDisabled,
         ]}
         onPress={() => setModalVisible(true)}
         disabled={selectedStocks.length >= maxSelections}
       >
-        <Ionicons name="add-circle-outline" size={24} color="#fff" />
-        <Text style={styles.addButtonText}>Add Stock</Text>
+        <LinearGradient
+            colors={['#4ECDC4', '#44A08D']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.buttonGradient}
+          >
+          <Ionicons name="add-circle-outline" size={24} color="#fff" />
+          <Text style={styles.addButtonText}>Add Stock</Text>
+        </LinearGradient>
       </TouchableOpacity>
 
       {/* Search Modal */}
@@ -429,6 +437,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: GlobalStyles.colors.gray500,
     textAlign: 'center',
+  },
+  buttonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 8,
+  },
+  buttonText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+    shadowOpacity: 0,
   },
 });
 

@@ -1,4 +1,4 @@
-// client/screens/ContributionScreen.js - CROSS-PLATFORM
+// client/screens/ContributionScreen.js - UPDATED WITH NEW THEME
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -13,10 +13,10 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
-import { GlobalStyles } from '../constants/styles';
 import { getEventById } from '../util/events';
-import PaymentForm from '../components/PaymentForm'; // Auto-selects .web or .native
+import PaymentForm from '../components/PaymentForm';
 import {
   createContribution,
   confirmContribution,
@@ -36,7 +36,6 @@ const ContributionScreen = ({ route, navigation }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
 
-  // Web-only Stripe hooks (only used on web)
   const stripe = Platform.OS === 'web' ? useStripe() : null;
   const elements = Platform.OS === 'web' ? useElements() : null;
 
@@ -60,20 +59,10 @@ const ContributionScreen = ({ route, navigation }) => {
   };
 
   const handleAmountChange = (text) => {
-    // Only allow numbers and decimal point
     const cleaned = text.replace(/[^0-9.]/g, '');
-    
-    // Prevent multiple decimal points
     const parts = cleaned.split('.');
-    if (parts.length > 2) {
-      return;
-    }
-    
-    // Limit to 2 decimal places
-    if (parts[1] && parts[1].length > 2) {
-      return;
-    }
-    
+    if (parts.length > 2) return;
+    if (parts[1] && parts[1].length > 2) return;
     setAmount(cleaned);
   };
 
@@ -82,14 +71,12 @@ const ContributionScreen = ({ route, navigation }) => {
   };
 
   const handleSubmit = async () => {
-    // Validate amount
     const validation = validateContributionAmount(parseFloat(amount));
     if (!validation.valid) {
       Alert.alert('Invalid Amount', validation.error);
       return;
     }
 
-    // Validate card
     if (!cardComplete) {
       Alert.alert('Card Required', 'Please enter your card details');
       return;
@@ -103,7 +90,6 @@ const ContributionScreen = ({ route, navigation }) => {
     const contributionAmount = parseFloat(amount);
     const remaining = event.targetAmount - event.currentAmount;
 
-    // Check if contribution exceeds remaining
     if (contributionAmount > remaining) {
       Alert.alert(
         'Amount Too High',
@@ -133,19 +119,16 @@ const ContributionScreen = ({ route, navigation }) => {
         message: message.trim(),
       };
 
-      // Step 1: Create payment intent
       console.log('📡 Creating payment intent...');
       const paymentResult = await createContribution(contributionData);
       console.log('✅ Payment intent created');
 
       const { clientSecret, paymentIntentId } = paymentResult;
 
-      // Step 2: Confirm payment (platform-specific)
       console.log('💳 Confirming payment...');
       let paymentIntent;
       
       if (Platform.OS === 'web') {
-        // Web: Use Stripe.js
         if (!stripe || !elements) {
           throw new Error('Stripe not loaded');
         }
@@ -160,27 +143,21 @@ const ContributionScreen = ({ route, navigation }) => {
         }
         paymentIntent = pi;
       } else {
-        // Mobile: Native Stripe SDK handled by PaymentForm component
-        // For mobile, we would use confirmPayment from @stripe/stripe-react-native
-        // But since we're testing on web, this won't execute
         throw new Error('Mobile payment not implemented in this version');
       }
 
       console.log('✅ Payment confirmed');
 
-      // Step 3: Notify backend
       console.log('📡 Notifying backend...');
       await confirmContribution(paymentIntentId);
       console.log('✅ Backend updated');
 
-      // Step 4: Update local state
       const updatedEvent = {
         ...event,
         currentAmount: event.currentAmount + contributionAmount,
       };
       setEvent(updatedEvent);
 
-      // Show success
       Alert.alert(
         '🎉 Success!',
         `Your $${contributionAmount.toFixed(2)} contribution has been processed!\n\nEvent: $${updatedEvent.currentAmount.toFixed(2)} / $${updatedEvent.targetAmount.toFixed(2)}`,
@@ -197,8 +174,8 @@ const ContributionScreen = ({ route, navigation }) => {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={GlobalStyles.colors.primary500} />
-        <Text style={styles.loadingText}>Loading...</Text>
+        <ActivityIndicator size="large" color="#FF6B6B" />
+        <Text style={styles.loadingText}>Loading event details...</Text>
       </View>
     );
   }
@@ -206,10 +183,17 @@ const ContributionScreen = ({ route, navigation }) => {
   if (!event) {
     return (
       <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle" size={60} color={GlobalStyles.colors.error500} />
+        <Text style={styles.errorEmoji}>😕</Text>
         <Text style={styles.errorText}>{error || 'Event not found'}</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <LinearGradient
+            colors={['#FF6B6B', '#FF8E53']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.backButtonGradient}
+          >
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     );
@@ -225,14 +209,19 @@ const ContributionScreen = ({ route, navigation }) => {
       style={styles.container}
     >
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Event Summary */}
+        {/* Event Summary Card */}
         <View style={styles.eventSummary}>
           <Text style={styles.eventTitle}>{event.title || event.eventTitle}</Text>
           
-          {/* Progress Bar */}
+          {/* Progress Bar with Gradient */}
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${Math.min(progress, 100)}%` }]} />
+              <LinearGradient
+                colors={['#FF6B6B', '#FF8E53']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.progressFill, { width: `${Math.min(progress, 100)}%` }]}
+              />
             </View>
             <View style={styles.progressStats}>
               <Text style={styles.progressText}>
@@ -246,7 +235,7 @@ const ContributionScreen = ({ route, navigation }) => {
 
           {remaining > 0 && (
             <View style={styles.remainingBanner}>
-              <Ionicons name="information-circle" size={20} color={GlobalStyles.colors.primary600} />
+              <Ionicons name="trending-up" size={20} color="#4ECDC4" />
               <Text style={styles.remainingText}>
                 ${remaining.toFixed(2)} needed to reach the goal
               </Text>
@@ -265,6 +254,7 @@ const ContributionScreen = ({ route, navigation }) => {
               value={amount}
               onChangeText={handleAmountChange}
               placeholder="0.00"
+              placeholderTextColor="#CCC"
               keyboardType="decimal-pad"
               maxLength={10}
             />
@@ -297,21 +287,19 @@ const ContributionScreen = ({ route, navigation }) => {
           {fees && (
             <View style={styles.feeBreakdown}>
               <View style={styles.feeRow}>
-                <Text style={styles.feeLabel}>Your contribution:</Text>
-                <Text style={styles.feeValue}>${fees.amount.toFixed(2)}</Text>
+                <Text style={styles.feeLabel}>Your contribution</Text>
+                <Text style={styles.feeValue}>${parseFloat(amount).toFixed(2)}</Text>
               </View>
               <View style={styles.feeRow}>
-                <Text style={styles.feeLabel}>
-                  Processing fee ({fees.stripeFeePercentage}% + ${fees.stripeFeeFixed}):
-                </Text>
-                <Text style={styles.feeValue}>-${fees.stripeFee.toFixed(2)}</Text>
+                <Text style={styles.feeLabel}>Processing fee</Text>
+                <Text style={styles.feeValue}>${fees.totalFee.toFixed(2)}</Text>
               </View>
               <View style={[styles.feeRow, styles.feeRowTotal]}>
-                <Text style={styles.feeLabelTotal}>Net to event:</Text>
-                <Text style={styles.feeValueTotal}>${fees.netAmount.toFixed(2)}</Text>
+                <Text style={styles.feeLabelTotal}>Total</Text>
+                <Text style={styles.feeValueTotal}>${fees.total.toFixed(2)}</Text>
               </View>
               <Text style={styles.feeNote}>
-                Processing fees help cover payment processing costs
+                Covers payment processing to ensure 100% of your contribution goes to the gift
               </Text>
             </View>
           )}
@@ -324,58 +312,66 @@ const ContributionScreen = ({ route, navigation }) => {
             style={styles.messageInput}
             value={message}
             onChangeText={setMessage}
-            placeholder="Leave a message for the recipient..."
+            placeholder="Write a personal message..."
+            placeholderTextColor="#999"
             multiline
-            numberOfLines={4}
-            maxLength={500}
+            maxLength={200}
           />
-          <Text style={styles.characterCount}>{message.length}/500</Text>
+          <Text style={styles.characterCount}>{message.length}/200</Text>
         </View>
 
-        {/* Card Details */}
+        {/* Payment Method */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💳 Card Details</Text>
+          <Text style={styles.sectionTitle}>Payment Method</Text>
           <PaymentForm
-            onCardChange={(details) => {
-              setCardComplete(details.complete);
-              setCardError(details.error);
+            onCardChange={(complete, error) => {
+              setCardComplete(complete);
+              setCardError(error);
             }}
           />
         </View>
 
-        {/* Payment Info */}
+        {/* Info Box */}
         <View style={styles.infoBox}>
-          <Ionicons name="lock-closed" size={24} color={GlobalStyles.colors.primary600} />
+          <Ionicons name="shield-checkmark" size={24} color="#4ECDC4" />
           <View style={styles.infoTextContainer}>
             <Text style={styles.infoTitle}>Secure Payment</Text>
             <Text style={styles.infoText}>
-              Your payment is processed securely through Stripe. We never store your card details.
+              Your payment information is encrypted and secure. We never store your card details.
             </Text>
           </View>
         </View>
 
-        {/* Submit Button */}
+        {/* Submit Button with Gradient */}
         <TouchableOpacity
           style={[
-            styles.submitButton,
-            (!amount || parseFloat(amount) <= 0 || !cardComplete || isProcessing) && styles.submitButtonDisabled,
+            styles.submitButtonContainer,
+            (!amount || parseFloat(amount) <= 0 || !cardComplete || isProcessing) && styles.buttonDisabled
           ]}
           onPress={handleSubmit}
-          disabled={!amount || parseFloat(amount) <= 0 || !cardComplete || isProcessing}
+          disabled={isProcessing || !amount || parseFloat(amount) <= 0 || !cardComplete}
+          activeOpacity={0.8}
         >
-          {isProcessing ? (
-            <>
-              <ActivityIndicator color="#fff" size="small" />
-              <Text style={styles.submitButtonText}>Processing...</Text>
-            </>
-          ) : (
-            <>
-              <Ionicons name="gift" size={24} color="#fff" />
-              <Text style={styles.submitButtonText}>
-                Contribute {amount ? `$${parseFloat(amount).toFixed(2)}` : ''}
-              </Text>
-            </>
-          )}
+          <LinearGradient
+            colors={['#4ECDC4', '#44A08D']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.submitButtonGradient}
+          >
+            {isProcessing ? (
+              <>
+                <ActivityIndicator color="#fff" size="small" />
+                <Text style={styles.submitButtonText}>Processing...</Text>
+              </>
+            ) : (
+              <>
+                <Ionicons name="gift" size={24} color="#fff" />
+                <Text style={styles.submitButtonText}>
+                  Contribute {amount ? `$${parseFloat(amount).toFixed(2)}` : ''}
+                </Text>
+              </>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
 
         {/* Terms */}
@@ -391,70 +387,89 @@ const ContributionScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF9F0',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF9F0',
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: GlobalStyles.colors.gray500,
+    color: '#666',
+    fontWeight: '500',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF9F0',
+  },
+  errorEmoji: {
+    fontSize: 64,
+    marginBottom: 16,
   },
   errorText: {
     fontSize: 16,
-    color: GlobalStyles.colors.gray600,
+    color: '#666',
     textAlign: 'center',
-    marginTop: 16,
     marginBottom: 24,
+    fontWeight: '500',
   },
   backButton: {
-    backgroundColor: GlobalStyles.colors.primary500,
+    borderRadius: 25,
+    overflow: 'hidden',
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  backButtonGradient: {
     paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 14,
   },
   backButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   eventSummary: {
-    padding: 20,
-    backgroundColor: GlobalStyles.colors.gray50,
-    borderBottomWidth: 1,
-    borderBottomColor: GlobalStyles.colors.gray200,
+    padding: 24,
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#FFE5B4',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   eventTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: GlobalStyles.colors.gray800,
-    marginBottom: 16,
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#333',
+    marginBottom: 20,
   },
   progressContainer: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   progressBar: {
-    height: 8,
-    backgroundColor: GlobalStyles.colors.gray200,
-    borderRadius: 4,
+    height: 12,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 6,
     overflow: 'hidden',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: GlobalStyles.colors.primary500,
-    borderRadius: 4,
+    borderRadius: 6,
   },
   progressStats: {
     flexDirection: 'row',
@@ -462,84 +477,95 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: 14,
-    color: GlobalStyles.colors.gray600,
+    color: '#666',
+    fontWeight: '600',
   },
   remainingBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: GlobalStyles.colors.primary50,
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: '#E8FFF8',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#C4F5E8',
+    gap: 8,
   },
   remainingText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: GlobalStyles.colors.primary700,
-    marginLeft: 8,
+    fontWeight: '700',
+    color: '#0D7C66',
+    flex: 1,
   },
   section: {
     padding: 20,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: GlobalStyles.colors.gray800,
+    fontWeight: '800',
+    color: '#333',
     marginBottom: 16,
   },
   amountInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: GlobalStyles.colors.gray100,
-    borderRadius: 12,
+    backgroundColor: '#fff',
+    borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 20,
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: GlobalStyles.colors.primary200,
+    borderColor: '#FF6B6B',
   },
   currencySymbol: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: GlobalStyles.colors.gray700,
+    fontWeight: '800',
+    color: '#333',
     marginRight: 8,
   },
   amountInput: {
     flex: 1,
     fontSize: 32,
-    fontWeight: 'bold',
-    color: GlobalStyles.colors.gray800,
+    fontWeight: '800',
+    color: '#333',
+    outlineStyle: 'none',
   },
   quickAmounts: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 16,
+    gap: 8,
   },
   quickAmountButton: {
     flex: 1,
-    paddingVertical: 12,
-    marginHorizontal: 4,
-    backgroundColor: GlobalStyles.colors.gray100,
-    borderRadius: 8,
+    paddingVertical: 14,
+    backgroundColor: '#fff',
+    borderRadius: 12,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   quickAmountButtonActive: {
-    backgroundColor: GlobalStyles.colors.primary50,
-    borderColor: GlobalStyles.colors.primary500,
+    backgroundColor: '#FFF5F5',
+    borderColor: '#FF6B6B',
   },
   quickAmountText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: GlobalStyles.colors.gray700,
+    fontWeight: '700',
+    color: '#666',
   },
   quickAmountTextActive: {
-    color: GlobalStyles.colors.primary700,
+    color: '#FF6B6B',
+    fontWeight: '800',
   },
   feeBreakdown: {
-    backgroundColor: GlobalStyles.colors.gray50,
+    backgroundColor: '#F8F8F8',
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   feeRow: {
     flexDirection: 'row',
@@ -548,94 +574,112 @@ const styles = StyleSheet.create({
   },
   feeRowTotal: {
     marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: GlobalStyles.colors.gray300,
+    paddingTop: 12,
+    borderTopWidth: 2,
+    borderTopColor: '#E0E0E0',
   },
   feeLabel: {
     fontSize: 14,
-    color: GlobalStyles.colors.gray600,
+    color: '#666',
+    fontWeight: '500',
   },
   feeValue: {
     fontSize: 14,
-    color: GlobalStyles.colors.gray700,
+    color: '#333',
+    fontWeight: '600',
   },
   feeLabelTotal: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: GlobalStyles.colors.gray800,
+    fontWeight: '800',
+    color: '#333',
   },
   feeValueTotal: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: GlobalStyles.colors.primary600,
+    fontWeight: '800',
+    color: '#4ECDC4',
   },
   feeNote: {
     fontSize: 12,
-    color: GlobalStyles.colors.gray500,
+    color: '#999',
     marginTop: 8,
     fontStyle: 'italic',
+    lineHeight: 18,
   },
   messageInput: {
-    backgroundColor: GlobalStyles.colors.gray100,
-    borderRadius: 12,
+    backgroundColor: '#fff',
+    borderRadius: 14,
     padding: 16,
     fontSize: 16,
-    color: GlobalStyles.colors.gray800,
+    color: '#333',
     minHeight: 100,
     textAlignVertical: 'top',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    fontWeight: '500',
+    outlineStyle: 'none',
   },
   characterCount: {
     fontSize: 12,
-    color: GlobalStyles.colors.gray500,
+    color: '#999',
     textAlign: 'right',
-    marginTop: 4,
+    marginTop: 6,
   },
   infoBox: {
     flexDirection: 'row',
-    backgroundColor: GlobalStyles.colors.primary50,
-    padding: 16,
+    backgroundColor: '#E8FFF8',
+    padding: 18,
     marginHorizontal: 20,
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#C4F5E8',
+    gap: 12,
   },
   infoTextContainer: {
     flex: 1,
-    marginLeft: 12,
   },
   infoTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: GlobalStyles.colors.gray800,
+    fontWeight: '800',
+    color: '#333',
     marginBottom: 4,
   },
   infoText: {
     fontSize: 14,
-    color: GlobalStyles.colors.gray600,
+    color: '#0D7C66',
     lineHeight: 20,
+    fontWeight: '500',
   },
-  submitButton: {
+  submitButtonContainer: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    shadowColor: '#4ECDC4',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  submitButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: GlobalStyles.colors.primary500,
-    paddingVertical: 16,
-    marginHorizontal: 20,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  submitButtonDisabled: {
-    backgroundColor: GlobalStyles.colors.gray400,
+    paddingVertical: 18,
+    gap: 12,
   },
   submitButtonText: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#fff',
-    marginLeft: 12,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+    shadowOpacity: 0,
   },
   termsText: {
     fontSize: 12,
-    color: GlobalStyles.colors.gray500,
+    color: '#999',
     textAlign: 'center',
     paddingHorizontal: 20,
     marginBottom: 32,

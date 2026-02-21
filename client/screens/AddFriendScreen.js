@@ -1,4 +1,4 @@
-// client/screens/AddFriendScreen.js - COMPLETE Dual Tab System
+// client/screens/AddFriendScreen.js - UPDATED WITH NEW THEME
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -15,20 +15,18 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { GlobalStyles } from '../constants/styles';
+import { LinearGradient } from 'expo-linear-gradient';
 import { searchUsers, addUserFriend, addContact } from '../util/friend';
 import useDebounce from '../hooks/useDebounce';
 
 export default function AddFriendScreen({ navigation }) {
-  const [mode, setMode] = useState('search'); // 'search' or 'manual'
+  const [mode, setMode] = useState('search');
   
-  // Search mode state
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [addingUserId, setAddingUserId] = useState(null);
   
-  // Manual entry mode state
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -60,17 +58,16 @@ export default function AddFriendScreen({ navigation }) {
 
   const handleAddUser = async (userId) => {
     try {
-        console.log("Handle Add User");
+      console.log("Handle Add User");
       setAddingUserId(userId);
       await addUserFriend(userId);
       
       Alert.alert(
-        'Success!',
+        'Success! 🎉',
         'Friend added successfully! You can now invite them to events.',
         [{ text: 'OK' }]
       );
       
-      // Remove from search results
       setSearchResults(prev => prev.filter(u => (u.id || u._id) !== userId));
     } catch (error) {
       const errorMessage = error.message || 'Failed to add friend';
@@ -86,14 +83,12 @@ export default function AddFriendScreen({ navigation }) {
   };
 
   const handleAddContact = async () => {
-    // Validation
     console.log("Handle Add Contact");
     if (!email || !firstName || !lastName) {
       Alert.alert('Missing Information', 'Please fill in email, first name, and last name.');
       return;
     }
     
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       Alert.alert('Invalid Email', 'Please enter a valid email address.');
@@ -110,36 +105,30 @@ export default function AddFriendScreen({ navigation }) {
       });
       
       if (result.type === 'user') {
-        // Email belongs to existing user
         Alert.alert(
-          'User Found!',
+          'User Found! 🎉',
           `This email belongs to ${result.friend.name}. They have been added as your friend!`,
           [
             {
               text: 'Great!',
               onPress: () => {
-                // Clear form
                 setEmail('');
                 setFirstName('');
                 setLastName('');
                 setPhoneNumber('');
-                
-                // Optionally navigate back
                 navigation.goBack();
               }
             }
           ]
         );
       } else {
-        // Contact created successfully
         Alert.alert(
-          'Contact Added!',
+          'Contact Added! 📧',
           `${result.contact.displayName} has been added to your contacts. They can receive gift links via email without creating an account.`,
           [
             {
               text: 'Add Another',
               onPress: () => {
-                // Clear form
                 setEmail('');
                 setFirstName('');
                 setLastName('');
@@ -172,7 +161,6 @@ export default function AddFriendScreen({ navigation }) {
     
     return (
       <View style={styles.userItem}>
-        {/* Avatar */}
         <View style={styles.avatarContainer}>
           {item.profileImage ? (
             <Image 
@@ -188,7 +176,6 @@ export default function AddFriendScreen({ navigation }) {
           )}
         </View>
 
-        {/* User Info */}
         <View style={styles.userInfo}>
           <Text style={styles.userName}>
             {item.fname} {item.lname}
@@ -196,17 +183,23 @@ export default function AddFriendScreen({ navigation }) {
           <Text style={styles.userEmail}>{item.email}</Text>
         </View>
 
-        {/* Add Button */}
         <TouchableOpacity
-          style={[styles.addButton, isAdding && styles.addButtonDisabled]}
+          style={styles.addButtonContainer}
           onPress={() => handleAddUser(userId)}
           disabled={isAdding}
         >
-          {isAdding ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Ionicons name="person-add" size={20} color="#fff" />
-          )}
+          <LinearGradient
+            colors={isAdding ? ['#CCC', '#AAA'] : ['#FF6B6B', '#FF8E53']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.addButtonGradient}
+          >
+            {isAdding ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Ionicons name="person-add" size={20} color="#fff" />
+            )}
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     );
@@ -218,54 +211,70 @@ export default function AddFriendScreen({ navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Mode Selector */}
+        {/* Mode Selector with Gradients */}
         <View style={styles.modeSelector}>
           <TouchableOpacity
-            style={[styles.modeButton, mode === 'search' && styles.modeButtonActive]}
+            style={styles.modeButtonContainer}
             onPress={() => setMode('search')}
+            activeOpacity={0.8}
           >
-            <Ionicons 
-              name="search" 
-              size={20} 
-              color={mode === 'search' ? '#fff' : GlobalStyles.colors.gray600} 
-            />
-            <Text style={[styles.modeText, mode === 'search' && styles.modeTextActive]}>
-              Search Users
-            </Text>
+            {mode === 'search' ? (
+              <LinearGradient
+                colors={['#FF6B6B', '#FF8E53']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.modeButtonGradient}
+              >
+                <Ionicons name="search" size={20} color="#fff" />
+                <Text style={styles.modeTextActive}>Search Users</Text>
+              </LinearGradient>
+            ) : (
+              <View style={styles.modeButtonInactive}>
+                <Ionicons name="search" size={20} color="#666" />
+                <Text style={styles.modeText}>Search Users</Text>
+              </View>
+            )}
           </TouchableOpacity>
           
           <TouchableOpacity
-            style={[styles.modeButton, mode === 'manual' && styles.modeButtonActive]}
+            style={styles.modeButtonContainer}
             onPress={() => setMode('manual')}
+            activeOpacity={0.8}
           >
-            <Ionicons 
-              name="person-add" 
-              size={20} 
-              color={mode === 'manual' ? '#fff' : GlobalStyles.colors.gray600} 
-            />
-            <Text style={[styles.modeText, mode === 'manual' && styles.modeTextActive]}>
-              Add Contact
-            </Text>
+            {mode === 'manual' ? (
+              <LinearGradient
+                colors={['#FF6B6B', '#FF8E53']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.modeButtonGradient}
+              >
+                <Ionicons name="person-add" size={20} color="#fff" />
+                <Text style={styles.modeTextActive}>Add Contact</Text>
+              </LinearGradient>
+            ) : (
+              <View style={styles.modeButtonInactive}>
+                <Ionicons name="person-add" size={20} color="#666" />
+                <Text style={styles.modeText}>Add Contact</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
         {mode === 'search' ? (
-          // ============================================
-          // SEARCH MODE - Find Registered Users
-          // ============================================
           <View style={styles.searchMode}>
             <View style={styles.infoBox}>
-              <Ionicons name="people" size={24} color={GlobalStyles.colors.primary600} />
+              <Ionicons name="people" size={24} color="#4ECDC4" />
               <Text style={styles.infoText}>
                 Search for people who already have accounts. They'll be added as friends instantly.
               </Text>
             </View>
             
             <View style={styles.searchContainer}>
-              <Ionicons name="search" size={20} color={GlobalStyles.colors.gray400} />
+              <Ionicons name="search" size={20} color="#999" />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Search by name or email..."
+                placeholderTextColor="#999"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 autoCapitalize="none"
@@ -273,43 +282,41 @@ export default function AddFriendScreen({ navigation }) {
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Ionicons name="close-circle" size={20} color={GlobalStyles.colors.gray400} />
+                  <Ionicons name="close-circle" size={20} color="#999" />
                 </TouchableOpacity>
               )}
             </View>
 
-            {/* Results */}
             {isSearching ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={GlobalStyles.colors.primary500} />
+                <ActivityIndicator size="large" color="#FF6B6B" />
                 <Text style={styles.loadingText}>Searching...</Text>
               </View>
             ) : searchResults.length > 0 ? (
               <FlatList
                 data={searchResults}
-                keyExtractor={(item) => item.id || item._id}
                 renderItem={renderUserItem}
+                keyExtractor={(item) => (item.id || item._id).toString()}
                 scrollEnabled={false}
               />
             ) : searchQuery.length >= 2 ? (
               <View style={styles.emptyContainer}>
-                <Ionicons name="search-outline" size={60} color={GlobalStyles.colors.gray300} />
+                <Text style={styles.emptyEmoji}>🔍</Text>
                 <Text style={styles.emptyText}>No users found</Text>
                 <Text style={styles.emptySubtext}>
-                  Try adding them as a contact instead
+                  Try searching with a different name or email
                 </Text>
               </View>
-            ) : searchQuery.length > 0 ? (
-              <Text style={styles.hintText}>Type at least 2 characters to search</Text>
-            ) : null}
+            ) : (
+              <Text style={styles.hintText}>
+                Type at least 2 characters to search
+              </Text>
+            )}
           </View>
         ) : (
-          // ============================================
-          // MANUAL ENTRY MODE - Add External Contact
-          // ============================================
           <View style={styles.manualMode}>
             <View style={styles.infoBox}>
-              <Ionicons name="mail" size={24} color={GlobalStyles.colors.primary600} />
+              <Ionicons name="mail" size={24} color="#FFD93D" />
               <Text style={styles.infoText}>
                 Add someone who doesn't have an account. They'll receive gift links via email and can contribute without signing up.
               </Text>
@@ -321,6 +328,7 @@ export default function AddFriendScreen({ navigation }) {
                 <TextInput
                   style={styles.input}
                   placeholder="john@example.com"
+                  placeholderTextColor="#999"
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -334,6 +342,7 @@ export default function AddFriendScreen({ navigation }) {
                 <TextInput
                   style={styles.input}
                   placeholder="John"
+                  placeholderTextColor="#999"
                   value={firstName}
                   onChangeText={setFirstName}
                   autoCapitalize="words"
@@ -345,6 +354,7 @@ export default function AddFriendScreen({ navigation }) {
                 <TextInput
                   style={styles.input}
                   placeholder="Doe"
+                  placeholderTextColor="#999"
                   value={lastName}
                   onChangeText={setLastName}
                   autoCapitalize="words"
@@ -356,6 +366,7 @@ export default function AddFriendScreen({ navigation }) {
                 <TextInput
                   style={styles.input}
                   placeholder="+1 (555) 123-4567"
+                  placeholderTextColor="#999"
                   value={phoneNumber}
                   onChangeText={setPhoneNumber}
                   keyboardType="phone-pad"
@@ -363,18 +374,26 @@ export default function AddFriendScreen({ navigation }) {
               </View>
 
               <TouchableOpacity
-                style={[styles.submitButton, isAdding && styles.submitButtonDisabled]}
+                style={styles.submitButtonContainer}
                 onPress={handleAddContact}
                 disabled={isAdding}
+                activeOpacity={0.8}
               >
-                {isAdding ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <>
-                    <Ionicons name="add-circle" size={24} color="#fff" />
-                    <Text style={styles.submitButtonText}>Add Contact</Text>
-                  </>
-                )}
+                <LinearGradient
+                  colors={isAdding ? ['#CCC', '#AAA'] : ['#FF6B6B', '#FF8E53']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.submitButtonGradient}
+                >
+                  {isAdding ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="add-circle" size={24} color="#fff" />
+                      <Text style={styles.submitButtonText}>Add Contact</Text>
+                    </>
+                  )}
+                </LinearGradient>
               </TouchableOpacity>
             </View>
           </View>
@@ -387,36 +406,49 @@ export default function AddFriendScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF9F0',
   },
   modeSelector: {
     flexDirection: 'row',
-    padding: 16,
+    padding: 20,
     gap: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: GlobalStyles.colors.gray200,
+    backgroundColor: '#FFF9F0',
   },
-  modeButton: {
+  modeButtonContainer: {
     flex: 1,
+    borderRadius: 14,
+    overflow: 'hidden',
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  modeButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    backgroundColor: GlobalStyles.colors.gray100,
     gap: 8,
   },
-  modeButtonActive: {
-    backgroundColor: GlobalStyles.colors.primary500,
+  modeButtonInactive: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    gap: 8,
   },
   modeText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: GlobalStyles.colors.gray600,
+    fontWeight: '700',
+    color: '#666',
   },
   modeTextActive: {
+    fontSize: 15,
+    fontWeight: '800',
     color: '#fff',
   },
   searchMode: {
@@ -427,37 +459,48 @@ const styles = StyleSheet.create({
   },
   infoBox: {
     flexDirection: 'row',
-    backgroundColor: GlobalStyles.colors.primary50,
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#E8FFF8',
+    borderRadius: 16,
+    padding: 18,
     marginBottom: 20,
     gap: 12,
+    borderWidth: 2,
+    borderColor: '#C4F5E8',
   },
   infoText: {
     flex: 1,
     fontSize: 14,
-    color: GlobalStyles.colors.gray700,
+    color: '#0D7C66',
     lineHeight: 20,
+    fontWeight: '500',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: GlobalStyles.colors.gray100,
-    borderRadius: 12,
+    backgroundColor: '#fff',
+    borderRadius: 14,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    gap: 8,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    marginLeft: 8,
-    color: GlobalStyles.colors.gray800,
+    color: '#333',
+    fontWeight: '500',
     outlineStyle: 'none',
   },
   hintText: {
     textAlign: 'center',
-    color: GlobalStyles.colors.gray400,
+    color: '#999',
     fontSize: 14,
     marginTop: 20,
   },
@@ -468,17 +511,23 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: GlobalStyles.colors.gray500,
+    color: '#666',
+    fontWeight: '500',
   },
   userItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: GlobalStyles.colors.gray200,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   avatarContainer: {
     marginRight: 12,
@@ -489,55 +538,64 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   avatarPlaceholder: {
-    backgroundColor: GlobalStyles.colors.primary200,
+    backgroundColor: '#FFE5E5',
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: GlobalStyles.colors.primary700,
+    fontWeight: '800',
+    color: '#FF6B6B',
   },
   userInfo: {
     flex: 1,
   },
   userName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: GlobalStyles.colors.gray800,
-    marginBottom: 2,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 3,
   },
   userEmail: {
     fontSize: 14,
-    color: GlobalStyles.colors.gray500,
+    color: '#666',
   },
-  addButton: {
-    backgroundColor: GlobalStyles.colors.primary500,
+  addButtonContainer: {
     width: 44,
     height: 44,
     borderRadius: 22,
+    overflow: 'hidden',
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  addButtonGradient: {
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  addButtonDisabled: {
-    backgroundColor: GlobalStyles.colors.gray400,
   },
   emptyContainer: {
     alignItems: 'center',
     paddingVertical: 60,
     paddingHorizontal: 32,
   },
+  emptyEmoji: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
   emptyText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: GlobalStyles.colors.gray700,
-    marginTop: 16,
+    fontWeight: '700',
+    color: '#333',
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    color: GlobalStyles.colors.gray500,
+    color: '#666',
     textAlign: 'center',
   },
   form: {
@@ -548,36 +606,41 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: GlobalStyles.colors.gray700,
+    fontWeight: '700',
+    color: '#333',
   },
   input: {
-    backgroundColor: GlobalStyles.colors.gray100,
-    borderRadius: 12,
-    paddingVertical: 14,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    paddingVertical: 16,
     paddingHorizontal: 16,
     fontSize: 16,
-    color: GlobalStyles.colors.gray800,
-    borderWidth: 1,
-    borderColor: 'transparent',
+    color: '#333',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    fontWeight: '500',
     outlineStyle: 'none',
   },
-  submitButton: {
+  submitButtonContainer: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginTop: 8,
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  submitButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: GlobalStyles.colors.primary500,
     paddingVertical: 16,
-    borderRadius: 12,
-    marginTop: 8,
     gap: 10,
-  },
-  submitButtonDisabled: {
-    backgroundColor: GlobalStyles.colors.gray400,
   },
   submitButtonText: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#fff',
   },
 });

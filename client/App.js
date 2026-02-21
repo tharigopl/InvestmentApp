@@ -1,6 +1,6 @@
 0// client/App.js - FINAL with Logout Button
 import { useContext, useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -61,11 +61,26 @@ const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
 import ManageEventFunds from './screens/ManageEventFunds';
 import PurchaseStocks from './screens/PurchaseStocks';
 
+// Custom Drawer Content
+import CustomDrawerContent from './components/CustomDrawerContent';
+
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 const BottomTabs = createBottomTabNavigator();
 
-
+// App Navigation Theme
+const AppNavigationTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: '#FF6B6B',
+    background: '#FFF9F0',
+    card: '#FFFFFF',
+    text: '#333333',
+    border: '#FFE5B4',
+    notification: '#4ECDC4',
+  },
+};
 
 // ============================================
 // AUTH STACK (Login/Signup)
@@ -74,9 +89,10 @@ function AuthStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: Colors.primary500 },
+        headerStyle: { backgroundColor: '#FF6B6B' },
         headerTintColor: 'white',
-        contentStyle: { backgroundColor: Colors.primary100 },
+        headerTitleStyle: { fontWeight: '800' },
+        contentStyle: { backgroundColor: '#FFF9F0' },
       }}
     >
       <Stack.Screen name="Login" component={LoginScreen} />
@@ -86,7 +102,7 @@ function AuthStack() {
 }
 
 // ============================================
-//  NEW: INVESTMENT EVENTS OVERVIEW (Bottom Tabs)
+//  NEW: MANAGE FUNDS OVERVIEW (Bottom Tabs)
 // ============================================
 function ManageFundsOverview() {
   const authCtx = useContext(AuthContext);
@@ -103,10 +119,34 @@ function ManageFundsOverview() {
   return (
     <BottomTabs.Navigator
       screenOptions={({ navigation }) => ({
-        headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        headerStyle: { 
+          backgroundColor: '#FF6B6B',
+          elevation: 0,
+          shadowOpacity: 0,
+        },
         headerTintColor: 'white',
-        tabBarStyle: { backgroundColor: GlobalStyles.colors.primary500 },
-        tabBarActiveTintColor: GlobalStyles.colors.accent500,
+        headerTitleStyle: {
+          fontWeight: '800',
+          fontSize: 20,
+        },
+        tabBarStyle: {
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 0,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          height: 65,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
+        tabBarActiveTintColor: '#FF6B6B',
+        tabBarInactiveTintColor: '#999999',
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '600',
+        },
         headerLeft: ({ tintColor }) => (
           <IconButton
             icon="menu"
@@ -173,10 +213,10 @@ function InvestmentEventsOverview() {
   return (
     <BottomTabs.Navigator
       screenOptions={({ navigation }) => ({
-        headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        headerStyle: { backgroundColor: '#FF6B6B' },
         headerTintColor: 'white',
-        tabBarStyle: { backgroundColor: GlobalStyles.colors.primary500 },
-        tabBarActiveTintColor: GlobalStyles.colors.accent500,
+        tabBarStyle: { backgroundColor: '#FF6B6B' },
+        tabBarActiveTintColor: 'white',
         headerLeft: ({ tintColor }) => (
           <IconButton
             icon="menu"
@@ -203,6 +243,20 @@ function InvestmentEventsOverview() {
         options={{
           title: 'Investment Events',
           tabBarLabel: 'Events',
+          tabBarStyle: {
+            backgroundColor: '#FFFFFF',  // White background
+            borderTopWidth: 0,
+            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            height: 65,
+            paddingBottom: 8,
+            paddingTop: 8,
+          },
+          tabBarActiveTintColor: '#FF6B6B',    // Coral for active
+          tabBarInactiveTintColor: '#CCCCCC',  // Lighter gray (less harsh)
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="gift" size={size} color={color} />
           ),
@@ -212,10 +266,24 @@ function InvestmentEventsOverview() {
       {/* My Contributions Tab */}
       <BottomTabs.Screen
         name="MyContributionsTab"
-        component={AllParties} // You can replace with a dedicated MyContributions screen
+        component={ContributionScreen} // You can replace with a dedicated MyContributions screen
         options={{
           title: 'My Contributions',
           tabBarLabel: 'Contributions',
+          tabBarStyle: {
+            backgroundColor: '#FFFFFF',  // White background
+            borderTopWidth: 0,
+            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            height: 65,
+            paddingBottom: 8,
+            paddingTop: 8,
+          },
+          tabBarActiveTintColor: '#FF6B6B',    // Coral for active
+          tabBarInactiveTintColor: '#CCCCCC',  // Lighter gray (less harsh)
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="wallet" size={size} color={color} />
           ),
@@ -229,6 +297,20 @@ function InvestmentEventsOverview() {
         options={{
           title: 'Portfolio',
           tabBarLabel: 'Portfolio',
+          tabBarStyle: {
+            backgroundColor: '#FFFFFF',  // White background
+            borderTopWidth: 0,
+            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            height: 65,
+            paddingBottom: 8,
+            paddingTop: 8,
+          },
+          tabBarActiveTintColor: '#FF6B6B',    // Coral for active
+          tabBarInactiveTintColor: '#CCCCCC',  // Lighter gray (less harsh)
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="trending-up" size={size} color={color} />
           ),
@@ -256,10 +338,24 @@ function AddFriendsOverview() {
   return (
     <BottomTabs.Navigator
       screenOptions={({ navigation }) => ({
-        headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        headerStyle: { backgroundColor: '#FF6B6B' },
         headerTintColor: 'white',
-        tabBarStyle: { backgroundColor: GlobalStyles.colors.primary500 },
-        tabBarActiveTintColor: GlobalStyles.colors.accent500,
+        headerTitleStyle: { fontWeight: '800' },
+        tabBarStyle: {
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 0,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          height: 65,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
+        tabBarActiveTintColor: '#FF6B6B',
+        tabBarInactiveTintColor: '#999999',
+        tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
         headerLeft: ({ tintColor }) => (
           <IconButton
             icon="menu"
@@ -314,10 +410,20 @@ function TripsOverview() {
   return (
     <BottomTabs.Navigator
       screenOptions={({ navigation }) => ({
-        headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        headerStyle: { backgroundColor: '#4ECDC4' },
         headerTintColor: 'white',
-        tabBarStyle: { backgroundColor: GlobalStyles.colors.primary500 },
-        tabBarActiveTintColor: GlobalStyles.colors.accent500,
+        headerTitleStyle: { fontWeight: '800' },
+        tabBarStyle: {
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 0,
+          elevation: 8,
+          height: 65,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
+        tabBarActiveTintColor: '#4ECDC4',
+        tabBarInactiveTintColor: '#999999',
+        tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
         headerLeft: ({ tintColor }) => (
           <IconButton
             icon="menu"
@@ -391,10 +497,10 @@ function ProfileOverview() {
   return (
     <BottomTabs.Navigator
       screenOptions={({ navigation }) => ({
-        headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
-        headerTintColor: 'white',
-        tabBarStyle: { backgroundColor: GlobalStyles.colors.primary500 },
-        tabBarActiveTintColor: GlobalStyles.colors.accent500,
+        headerStyle: { backgroundColor: '#FF6B6B' },
+        headerTintColor: '#333',
+        tabBarStyle: { backgroundColor: '#FF6B6B' },
+        tabBarActiveTintColor: 'white',
         headerLeft: ({ tintColor }) => (
           <IconButton
             icon="menu"
@@ -416,10 +522,24 @@ function ProfileOverview() {
     >
       <BottomTabs.Screen
         name="BottomManageUserScreen"
-        component={ManageUser}
+        component={ProfileScreen}
         options={{
           title: 'Profile',
           tabBarLabel: 'My Profile',
+	  tabBarStyle: {
+            backgroundColor: '#FFFFFF',  // White background
+            borderTopWidth: 0,
+            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            height: 65,
+            paddingBottom: 8,
+            paddingTop: 8,
+          },
+          tabBarActiveTintColor: '#FF6B6B',    // Coral for active
+          tabBarInactiveTintColor: '#CCCCCC',  // Lighter gray (less harsh)
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
@@ -431,6 +551,20 @@ function ProfileOverview() {
         options={{
           title: 'Friends',
           tabBarLabel: 'My Friends',
+	  tabBarStyle: {
+            backgroundColor: '#FFFFFF',  // White background
+            borderTopWidth: 0,
+            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            height: 65,
+            paddingBottom: 8,
+            paddingTop: 8,
+          },
+          tabBarActiveTintColor: '#FF6B6B',    // Coral for active
+          tabBarInactiveTintColor: '#CCCCCC',  // Lighter gray (less harsh)
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people" size={size} color={color} />
           ),
@@ -438,10 +572,24 @@ function ProfileOverview() {
       />
       <BottomTabs.Screen
         name="BottomAddFriends"
-        component={MultiSelectAddFriend}
+        component={AddFriendScreen}
         options={{
           title: 'Add Friends',
           tabBarLabel: 'Add Friends',
+	  tabBarStyle: {
+            backgroundColor: '#FFFFFF',  // White background
+            borderTopWidth: 0,
+            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            height: 65,
+            paddingBottom: 8,
+            paddingTop: 8,
+          },
+          tabBarActiveTintColor: '#FF6B6B',    // Coral for active
+          tabBarInactiveTintColor: '#CCCCCC',  // Lighter gray (less harsh)
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-add" size={size} color={color} />
           ),
@@ -488,10 +636,20 @@ function PartiesOverview() {
   return (
     <BottomTabs.Navigator
       screenOptions={({ navigation }) => ({
-        headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
-        headerTintColor: 'white',
-        tabBarStyle: { backgroundColor: GlobalStyles.colors.primary500 },
-        tabBarActiveTintColor: GlobalStyles.colors.accent500,
+        headerStyle: { backgroundColor: '#A8E6CF' },
+        headerTintColor: '#333',
+        headerTitleStyle: { fontWeight: '800' },
+        tabBarStyle: {
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 0,
+          elevation: 8,
+          height: 65,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
+        tabBarActiveTintColor: '#A8E6CF',
+        tabBarInactiveTintColor: '#999999',
+        tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
         headerLeft: ({ tintColor }) => (
           <IconButton
             icon="menu"
@@ -554,15 +712,32 @@ function DrawerNavig(){
   
   return (
     <Drawer.Navigator
+      drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={{
-        headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        headerStyle: { backgroundColor: '#FF6B6B' },
         headerTintColor: 'white',
-        sceneContainerStyle: { backgroundColor: GlobalStyles.colors.gray50 },
-        drawerContentStyle: { backgroundColor: GlobalStyles.colors.primary500 },
-        drawerInactiveTintColor: 'white',
-        drawerActiveTintColor: GlobalStyles.colors.primary500,
-        drawerActiveBackgroundColor: GlobalStyles.colors.accent500,
-        //  LOGOUT BUTTON IN ALL DRAWER SCREENS
+        headerTitleStyle: { fontWeight: '800' },
+        sceneContainerStyle: { backgroundColor: '#FFF9F0' },
+        drawerStyle: {
+          backgroundColor: '#FFF9F0',
+          width: 280,
+        },
+        drawerActiveTintColor: '#FF6B6B',
+        drawerInactiveTintColor: '#666666',
+        drawerActiveBackgroundColor: '#FFE5B4',
+        drawerInactiveBackgroundColor: 'transparent',
+        drawerLabelStyle: {
+          fontSize: 16,
+          fontWeight: '600',
+          marginLeft: -16,
+        },
+        drawerItemStyle: {
+          borderRadius: 12,
+          marginHorizontal: 12,
+          marginVertical: 4,
+          paddingHorizontal: 12,
+        },
+	//  LOGOUT BUTTON IN ALL DRAWER SCREENS
         headerRight: ({ tintColor }) => (
           <IconButton
             icon="exit"
@@ -579,9 +754,7 @@ function DrawerNavig(){
         component={InvestmentEventsOverview}
         options={{
           title: '💰 Investment Events',
-          drawerIcon: ({ focused, size, color }) => (
-            <Ionicons name="gift" size={size} color={color} />
-          ),
+          drawerIcon: () => null,
           headerShown: false, // InvestmentEventsOverview has its own header with logout
         }}
       />
@@ -591,9 +764,7 @@ function DrawerNavig(){
         component={ManageFundsOverview}
         options={{
           title: '💰 Manage Funds',
-          drawerIcon: ({ focused, size, color }) => (
-            <Ionicons name="gift" size={size} color={color} />
-          ),
+          drawerIcon: () => null,
           headerShown: false, // 
         }}
       />
@@ -602,10 +773,8 @@ function DrawerNavig(){
         name="AddFriends" 
         component={AddFriendsOverview}
         options={{
-          title: '💰 Add Friends',
-          drawerIcon: ({ focused, size, color }) => (
-            <Ionicons name="gift" size={size} color={color} />
-          ),
+          title: '👥 Add Friends',
+          drawerIcon: () => null,
           headerShown: false, // AddFriendsOverview has its own header with logout
         }}
       />
@@ -614,10 +783,8 @@ function DrawerNavig(){
         name="HomeScreen" 
         component={HomeScreen}
         options={{
-          title: 'Home',
-          drawerIcon: ({ focused, size, color }) => (
-            <Ionicons name="home" size={size} color={color} />
-          ),
+          title: '🏠 Home',
+          drawerIcon: () => null,
         }}
       />
 
@@ -626,11 +793,21 @@ function DrawerNavig(){
         name="ProfileOverviewDrawer" 
         component={ProfileOverview}
         options={{
-          title: 'Profile',
-          drawerIcon: ({ focused, size, color }) => (
-            <Ionicons name="person" size={size} color={color} />
-          ),
-          headerShown: false, // ProfileOverview has its own header with logout
+          title: '👤 Profile',
+          drawerIcon: () => null,
+          headerShown: false,
+        }}
+      />
+      <Drawer.Screen 
+        name="ProfileScreenDirect" 
+        component={ProfileScreen}  // ✅ Direct component, no tabs!
+        options={{
+          title: '👤 My Profile',
+          drawerIcon: ({ focused, size, color }) => null,
+          headerShown: true,  // ✅ Shows header with back button
+          headerStyle: { backgroundColor: '#FF6B6B' },
+          headerTintColor: '#333',
+          headerTitleStyle: { fontWeight: '800' },
         }}
       />
 
@@ -639,10 +816,8 @@ function DrawerNavig(){
         name="FriendsOverviewDrawer" 
         component={AllFriends}
         options={{
-          title: 'Friends',
-          drawerIcon: ({ focused, size, color }) => (
-            <Ionicons name="people" size={size} color={color} />
-          ),
+          title: '👥 Friends',
+          drawerIcon: () => null,
         }}
       />
 
@@ -651,10 +826,8 @@ function DrawerNavig(){
         name="TripsOverviewDrawer" 
         component={TripsOverview}
         options={{
-          title: 'Trips',
-          drawerIcon: ({ focused, size, color }) => (
-            <Ionicons name="airplane" size={size} color={color} />
-          ),
+          title: '✈️ Trips',
+          drawerIcon: () => null,
           headerShown: false, // TripsOverview has its own header with logout
         }}
       />
@@ -664,10 +837,8 @@ function DrawerNavig(){
         name="WelcomeScreen" 
         component={WelcomeScreen}
         options={{
-          title: 'Welcome',
-          drawerIcon: ({ focused, size, color }) => (
-            <Ionicons name="hand-right" size={size} color={color} />
-          ),
+          title: '👋 Welcome',
+          drawerIcon: () => null,
         }}
       />
     </Drawer.Navigator>
@@ -683,7 +854,6 @@ function AuthenticatedStack() {
   const stripeCtx = useContext(StripeContext);
 
   function logout(){
-    console.log("Logging out...");
     authCtx.logout();
     userCtx.removeuseraccount();
     stripeCtx.removestripeaccount();
@@ -692,10 +862,11 @@ function AuthenticatedStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        headerStyle: { backgroundColor: '#FF6B6B' },
         headerTintColor: 'white',
-        contentStyle: { backgroundColor: GlobalStyles.colors.gray50 },
-        //  DEFAULT LOGOUT BUTTON FOR ALL STACK SCREENS
+        headerTitleStyle: { fontWeight: '800' },
+        contentStyle: { backgroundColor: '#FFF9F0' },
+	//  DEFAULT LOGOUT BUTTON FOR ALL STACK SCREENS
         headerRight: ({ tintColor }) => (
           <IconButton
             icon="exit"
@@ -883,7 +1054,11 @@ function AuthenticatedStack() {
       <Stack.Screen 
         name="ProfileScreen" 
         component={ProfileScreen}
-        options={{ headerShown: false }}
+        options={{ 
+          title: 'My Profile',
+          headerStyle: { backgroundColor: '#FFD93D' },
+          headerTintColor: '#333',
+        }}
       />
 
       {/* Stripe */}
@@ -924,7 +1099,7 @@ function AuthenticatedStack() {
 function Navigation() {
   const authCtx = useContext(AuthContext);
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={AppNavigationTheme}>
       {!authCtx.isAuthenticated && <AuthStack />}
       {authCtx.isAuthenticated && <AuthenticatedStack />}
     </NavigationContainer>
