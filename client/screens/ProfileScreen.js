@@ -39,16 +39,30 @@ export default function ProfileScreen({ navigation }) {
     friendsCount: 0,
   });
 
+  // ✅ Sync profile image from UserContext
+  useEffect(() => {
+    if (userCtx?.userAccount?.profileImage) {
+      console.log('📸 Setting profile image from context:', userCtx.userAccount.profileImage);
+      
+      let imageUrl = userCtx.userAccount.profileImage;
+      
+      // ✅ Make sure URL is complete
+      if (imageUrl && !imageUrl.startsWith('http')) {
+        imageUrl = `${API_URL}${imageUrl}`;
+      }
+      
+      console.log('📸 Final image URL:', imageUrl);
+      setProfileImageUrl(imageUrl);
+    } else {
+      console.log('📸 No profile image in context');
+      setProfileImageUrl(null);
+    }
+  }, [userCtx?.userAccount?.profileImage]);
+
+  // Load user data on mount
   useEffect(() => {
     loadUserData();
   }, []);
-
-  useEffect(() => {
-    if (userCtx?.useraccount?.profileImage) {
-      console.log('📸 Setting profile image from context:', userCtx.useraccount.profileImage);
-      setProfileImageUrl(userCtx.useraccount.profileImage);
-    }
-  }, [userCtx?.useraccount?.profileImage]);
 
   /**
    * Load user profile data using utility functions
@@ -63,7 +77,7 @@ export default function ProfileScreen({ navigation }) {
         return;
       }
 
-      // Fetch user profile with stats (uses apiClient internally)
+      // Fetch user profile with stats
       const profileData = await getUserProfileData(userId);
       
       setStats({
@@ -114,9 +128,17 @@ export default function ProfileScreen({ navigation }) {
         const asset = result.assets[0];
         console.log('📷 Image picker result:', asset);
         
-        // For web, we need to get the actual blob from the URI
+        // For web, fetch the blob first
         if (Platform.OS === 'web' && asset.uri) {
-          await uploadImage(asset.uri);
+          const response = await fetch(asset.uri);
+          const blob = await response.blob();
+          
+          if (!blob.type.startsWith('image/')) {
+            Alert.alert('Error', `Invalid file type: ${blob.type}`);
+            return;
+          }
+          
+          await uploadImage(blob);
         } else {
           await uploadImage(asset.uri);
         }
@@ -154,13 +176,13 @@ export default function ProfileScreen({ navigation }) {
       
       console.log('🖼️ New image URL:', imageUrl);
 
+      // ✅ Update local state first
       setProfileImageUrl(imageUrl);
-
       
-      // Update UserContext
-      if (userCtx?.useraccount) {
-        userCtx.setuseraccount({
-          ...userCtx.useraccount,
+      // ✅ Then update UserContext
+      if (userCtx?.userAccount) {
+        userCtx.setUserAccount({
+          ...userCtx.userAccount,
           profileImage: imageUrl,
         });
       }
@@ -188,7 +210,7 @@ export default function ProfileScreen({ navigation }) {
           style: 'destructive',
           onPress: () => {
             authCtx.logout();
-            userCtx.removeuseraccount();
+            userCtx.removeUserAccount();
             stripeCtx.removestripeaccount();
           },
         },
@@ -205,12 +227,10 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handleViewEvents = () => {
-    navigation.navigate('Drawer', {
-      screen: 'InvestmentEvents',
-      params: {
-        screen: 'EventFeedTab',
-      },
-    });
+    navigation.navigate('EventFeedDirect');
+    // navigation.navigate('InvestmentEvents', {            
+    //     screen: 'EventFeedTab',      
+    // });
   };
 
   if (isLoading) {
@@ -222,13 +242,22 @@ export default function ProfileScreen({ navigation }) {
     );
   }
 
-  const userInitial = userCtx?.useraccount?.fname?.[0]?.toUpperCase() || '?';
-  const userName = userCtx?.useraccount?.fname 
-    ? `${userCtx.useraccount.fname} ${userCtx.useraccount.lname || ''}`.trim()
+  // ✅ Get user data from context
+  const userInitial = userCtx?.userAccount?.fname?.[0]?.toUpperCase() || '?';
+  const userName = userCtx?.userAccount?.fname 
+    ? `${userCtx.userAccount.fname} ${userCtx.userAccount.lname || ''}`.trim()
     : 'User';
   const userEmail = userCtx?.userAccount?.email || 'email@example.com';
-  const profileImage = profileImageUrl || userCtx?.useraccount?.profileImage;
-  console.log('🎨 Current profile image:', profileImage);
+  
+  // ✅ Use local state for profile image (already has full URL)
+  const profileImage = profileImageUrl;
+  
+  console.log('🎨 Rendering with:', {
+    userName,
+    userEmail,
+    profileImage: !!profileImage,
+    profileImageUrl: profileImage,
+  });
 
   return (
     <ScrollView 
@@ -255,6 +284,14 @@ export default function ProfileScreen({ navigation }) {
             <Image 
               source={{ uri: profileImage }} 
               style={styles.profileImage}
+              key={profileImage}  // ✅ Forces re-render when URL changes
+              onError={(error) => {
+                console.error('❌ Image load error:', error.nativeEvent?.error);
+                console.error('❌ Failed URL:', profileImage);
+              }}
+              onLoad={() => {
+                console.log('✅ Image loaded successfully:', profileImage);
+              }}
             />
           ) : (
             <View style={styles.profileImagePlaceholder}>
@@ -287,7 +324,7 @@ export default function ProfileScreen({ navigation }) {
         </TouchableOpacity>
       </LinearGradient>
 
-      {/* Stats Grid - Real Data */}
+      {/* Stats Grid */}
       <View style={styles.statsContainer}>
         <View style={styles.statsRow}>
           <TouchableOpacity 

@@ -76,12 +76,8 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
       
       try {
-        // Clear stored token
-        await AsyncStorage.removeItem('token');
-        await AsyncStorage.removeItem('uid');
-        
-        // You can emit an event here to navigate to login
-        // EventEmitter.emit('unauthorized');
+        // Clear all auth data
+        await clearAuthData();
         
         console.log('Session expired. Please login again.');
       } catch (storageError) {
@@ -167,8 +163,13 @@ apiClient.interceptors.response.use(
   }
 );
 
+// ============================================
+// AUTH HELPER FUNCTIONS
+// ============================================
+
 /**
- * Helper function to check if user is authenticated
+ * Check if user is authenticated
+ * @returns {Promise<boolean>}
  */
 export const isAuthenticated = async () => {
   try {
@@ -181,7 +182,8 @@ export const isAuthenticated = async () => {
 };
 
 /**
- * Helper function to get current auth token
+ * Get current auth token
+ * @returns {Promise<string|null>}
  */
 export const getAuthToken = async () => {
   try {
@@ -193,7 +195,78 @@ export const getAuthToken = async () => {
 };
 
 /**
- * Helper function to set auth token
+ * Get current user ID
+ * @returns {Promise<string|null>}
+ */
+export const getUserId = async () => {
+  try {
+    return await AsyncStorage.getItem('uid');
+  } catch (error) {
+    console.error('Error getting user ID:', error);
+    return null;
+  }
+};
+
+/**
+ * ✅ Save complete auth data (token + userId)
+ * @param {string} token - Auth token
+ * @param {string} userId - User ID
+ * @returns {Promise<void>}
+ */
+export const saveAuthData = async (token, userId) => {
+  try {
+    await Promise.all([
+      AsyncStorage.setItem('token', token),
+      AsyncStorage.setItem('uid', userId),
+    ]);
+    console.log('✅ Auth data saved:', { userId });
+  } catch (error) {
+    console.error('Error saving auth data:', error);
+    throw error;
+  }
+};
+
+/**
+ * ✅ Clear all auth data
+ * @returns {Promise<void>}
+ */
+export const clearAuthData = async () => {
+  try {
+    await Promise.all([
+      AsyncStorage.removeItem('token'),
+      AsyncStorage.removeItem('uid'),
+      AsyncStorage.removeItem('userAccount'),
+    ]);
+    console.log('✅ Auth data cleared');
+  } catch (error) {
+    console.error('Error clearing auth data:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get all auth data at once
+ * @returns {Promise<{token: string|null, userId: string|null}>}
+ */
+export const getAuthData = async () => {
+  try {
+    const [token, userId] = await Promise.all([
+      AsyncStorage.getItem('token'),
+      AsyncStorage.getItem('uid'),
+    ]);
+    return { token, userId };
+  } catch (error) {
+    console.error('Error getting auth data:', error);
+    return { token: null, userId: null };
+  }
+};
+
+// ============================================
+// DEPRECATED - Keep for backwards compatibility
+// ============================================
+
+/**
+ * @deprecated Use saveAuthData instead
  */
 export const setAuthToken = async (token) => {
   try {
@@ -204,7 +277,7 @@ export const setAuthToken = async (token) => {
 };
 
 /**
- * Helper function to clear auth token
+ * @deprecated Use clearAuthData instead
  */
 export const clearAuthToken = async () => {
   try {

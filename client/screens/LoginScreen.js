@@ -1,4 +1,4 @@
-// client/screens/LoginScreen.js - UPDATED WITH NEW THEME
+// client/screens/LoginScreen.js - UPDATED WITH NEW AUTH HELPERS
 import { useContext, useState } from 'react';
 import { 
   View, 
@@ -14,6 +14,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../store/auth-context';
+import { UserContext } from '../store/user-context';
+import { saveAuthData } from '../util/api-client';
 import { logintdtserver } from '../util/auth';
 
 function LoginScreen({ navigation }) {
@@ -23,6 +25,7 @@ function LoginScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
 
   const authCtx = useContext(AuthContext);
+  const userCtx = useContext(UserContext);
 
   async function loginHandler() {
     if (!email || !password) {
@@ -32,20 +35,47 @@ function LoginScreen({ navigation }) {
 
     setIsAuthenticating(true);
     try {
-      const token = await logintdtserver(email, password);
-      console.log("Login successful:", token.token, token.userId);
+      const response = await logintdtserver(email, password);
+      console.log("Login successful:", response.token, response.userId);
       
-      authCtx.authenticate(token.token);
-      authCtx.addUid(token.userId);
-      authCtx.saveStripeUserId(token.stripeuser ? token.stripeuser : "");
-      
-      if (token.data === 'You entered the wrong password.') {
+      // Check for error response
+      if (response.data === 'You entered the wrong password.') {
         Alert.alert(
           'Authentication failed!',
           'Could not log you in. Please check your credentials or try again later!'
         );
         setIsAuthenticating(false);
+        return;
       }
+      
+      // ✅ Step 1: Save token + userId to AsyncStorage using new helper
+      await saveAuthData(response.token, response.userId);
+      
+      // ✅ Step 2: Set user context
+      const userData = response.user || response.data?.user || response;
+      
+      console.log('Setting user context with:', {
+        fname: userData.fname,
+        lname: userData.lname,
+        email: userData.email,
+      });
+      
+      userCtx.setUserAccount({
+        fname: userData.fname,
+        lname: userData.lname,
+        email: userData.email,
+        profileImage: userData.profileImage,
+        phone: userData.phone,
+        _id: userData._id || response.userId,
+      });
+      
+      // ✅ Step 3: Authenticate (this will trigger navigation)
+      authCtx.authenticate(response.token);
+      authCtx.addUid(response.userId);
+      authCtx.saveStripeUserId(response.stripeuser ? response.stripeuser : "");
+      
+      console.log('✅ Login complete - auth data saved, user context set');
+      
     } catch (error) {
       console.log("Login error:", error);
       Alert.alert(

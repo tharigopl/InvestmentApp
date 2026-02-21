@@ -33,6 +33,7 @@ import ManageParty from './screens/ManageParty';
 import UserDetails from './screens/UserDetails';
 import ManageUser from './screens/ManageUser';
 import MultiSelectAddFriend from './screens/MultiSelectAddFriend';
+import EditProfileScreen from './screens/EditProfileScreen';
 
 //  NEW Investment Event Screens
 import EventFeed from './screens/EventFeed';
@@ -112,7 +113,7 @@ function ManageFundsOverview() {
   function logout(){
     console.log("Logging out...");
     authCtx.logout();
-    userCtx.removeuseraccount();
+    userCtx.removeUserAccount();
     stripeCtx.removestripeaccount();
   }
 
@@ -206,7 +207,7 @@ function InvestmentEventsOverview() {
   function logout(){
     console.log("Logging out...");
     authCtx.logout();
-    userCtx.removeuseraccount();
+    userCtx.removeUserAccount();
     stripeCtx.removestripeaccount();
   }
 
@@ -331,7 +332,7 @@ function AddFriendsOverview() {
   function logout(){
     console.log("Logging out...");
     authCtx.logout();
-    userCtx.removeuseraccount();
+    userCtx.removeUserAccount();
     stripeCtx.removestripeaccount();
   }
 
@@ -403,7 +404,7 @@ function TripsOverview() {
   function logout(){
     console.log("Logging out...");
     authCtx.logout();
-    userCtx.removeuseraccount();
+    userCtx.removeUserAccount();
     stripeCtx.removestripeaccount();
   }
 
@@ -490,7 +491,7 @@ function ProfileOverview() {
   function logout(){
     console.log("Logging out...");
     authCtx.logout();
-    userCtx.removeuseraccount();
+    userCtx.removeUserAccount();
     stripeCtx.removestripeaccount();
   }
 
@@ -629,7 +630,7 @@ function PartiesOverview() {
   function logout(){
     console.log("Logging out...");
     authCtx.logout();
-    userCtx.removeuseraccount();
+    userCtx.removeUserAccount();
     stripeCtx.removestripeaccount();
   }
 
@@ -706,7 +707,7 @@ function DrawerNavig(){
   function logout(){
     console.log("Logging out...");
     authCtx.logout();
-    userCtx.removeuseraccount();
+    userCtx.removeUserAccount();
     stripeCtx.removestripeaccount();
   }
   
@@ -798,7 +799,7 @@ function DrawerNavig(){
           headerShown: false,
         }}
       />
-      <Drawer.Screen 
+      {/* <Drawer.Screen 
         name="ProfileScreenDirect" 
         component={ProfileScreen}  // ✅ Direct component, no tabs!
         options={{
@@ -809,7 +810,7 @@ function DrawerNavig(){
           headerTintColor: '#333',
           headerTitleStyle: { fontWeight: '800' },
         }}
-      />
+      /> */}
 
       {/* Friends */}
       <Drawer.Screen 
@@ -833,14 +834,14 @@ function DrawerNavig(){
       />
 
       {/* Welcome Screen (Optional) */}
-      <Drawer.Screen 
+      {/* <Drawer.Screen 
         name="WelcomeScreen" 
         component={WelcomeScreen}
         options={{
           title: '👋 Welcome',
           drawerIcon: () => null,
         }}
-      />
+      /> */}
     </Drawer.Navigator>
   );
 }
@@ -855,7 +856,7 @@ function AuthenticatedStack() {
 
   function logout(){
     authCtx.logout();
-    userCtx.removeuseraccount();
+    userCtx.removeUserAccount();
     stripeCtx.removestripeaccount();
   }
 
@@ -1051,6 +1052,7 @@ function AuthenticatedStack() {
         component={ManageUser}
         options={{ title: 'Manage Profile' }}
       />
+      {/* Profile Screen 
       <Stack.Screen 
         name="ProfileScreen" 
         component={ProfileScreen}
@@ -1059,6 +1061,11 @@ function AuthenticatedStack() {
           headerStyle: { backgroundColor: '#FFD93D' },
           headerTintColor: '#333',
         }}
+      />*/}
+      <Stack.Screen 
+        name="EditProfile" 
+        component={EditProfileScreen}
+        options={{ headerShown: false }}
       />
 
       {/* Stripe */}
@@ -1088,6 +1095,11 @@ function AuthenticatedStack() {
         name="GroupChatScreen" 
         component={GroupChatScreen}
         options={{ title: 'Group Chat' }}
+      />
+      <Stack.Screen 
+        name="EventFeedDirect" 
+        component={EventFeed}
+        options={{ title: 'Investment Events' }}
       />
     </Stack.Navigator>
   );

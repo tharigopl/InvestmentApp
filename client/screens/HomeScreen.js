@@ -56,7 +56,7 @@ function HomeScreen({ navigation }) {
           const user = await getUserDetails(token, uid);
           //setFetchedAccounts(accounts);
           console.log("Inside  Get User Details 99999 ", user);
-          usersCtx.setuseraccount(user);
+          usersCtx.setUserAccount(user);
           console.log("Inside  Get User Details Auth  ", usersCtx);
         } catch (error) {
           setError('Could not fetch user 1 details!');

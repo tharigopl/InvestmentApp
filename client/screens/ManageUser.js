@@ -29,7 +29,7 @@ function ManageUser({ route, navigation }){
     //const editedUserId = route.params?.editedUserId;
     //const isEditing = !!editedUserId;
     const isEditing = true;
-    const selectedUser = userCtx.useraccount;
+    const selectedUser = userCtx.userAccount;
   
     console.log("Edited User", selectedUser);
     
@@ -50,7 +50,7 @@ function ManageUser({ route, navigation }){
           if (isEditing) {
             const user = await updateUser(token, authCtx.uid, userData);
             console.log("Confirm Handler 1", user);
-            userCtx.setuseraccount(user);
+            userCtx.setUserAccount(user);
             //userCtx.updateUser(editedUserId, userData);
             //await updateUser(editedUserId, userData, token);
           } else {

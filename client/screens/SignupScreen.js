@@ -1,4 +1,4 @@
-// client/screens/SignupScreen.js - UPDATED WITH NEW THEME
+// client/screens/SignupScreen.js - UPDATED WITH NEW AUTH HELPERS
 import { useContext, useState } from 'react';
 import {
   View,
@@ -14,6 +14,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../store/auth-context';
+import { UserContext } from '../store/user-context';
+import { saveAuthData } from '../util/api-client';
 import { createUserTdtServer } from '../util/auth';
 
 function SignupScreen({ navigation }) {
@@ -25,6 +27,7 @@ function SignupScreen({ navigation }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const authCtx = useContext(AuthContext);
+  const userCtx = useContext(UserContext);
 
   async function signupHandler() {
     // Validation
@@ -50,11 +53,35 @@ function SignupScreen({ navigation }) {
 
     setIsAuthenticating(true);
     try {
-      const token = await createUserTdtServer(email, password);
-      console.log("Signup successful:", token.data.token);
+      const response = await createUserTdtServer(email, password);
+      console.log("Signup successful:", response.data.token);
       
-      authCtx.authenticate(token.data.token);
-      authCtx.addUid(token.data.userId);
+      // ✅ Step 1: Save token + userId to AsyncStorage using new helper
+      await saveAuthData(response.data.token, response.data.userId);
+      
+      // ✅ Step 2: Set user context
+      const userData = response.data.user || response.user || response.data;
+      
+      console.log('Setting user context with:', {
+        email: userData.email || email,
+        _id: userData._id || response.data.userId,
+      });
+      
+      userCtx.setUserAccount({
+        fname: userData.fname || '',
+        lname: userData.lname || '',
+        email: userData.email || email,
+        profileImage: userData.profileImage || null,
+        phone: userData.phone || '',
+        _id: userData._id || response.data.userId,
+      });
+      
+      // ✅ Step 3: Authenticate (this will trigger navigation)
+      authCtx.authenticate(response.data.token);
+      authCtx.addUid(response.data.userId);
+      
+      console.log('✅ Signup complete - auth data saved, user context set');
+      
     } catch (error) {
       console.log("Signup error:", error);
       Alert.alert(

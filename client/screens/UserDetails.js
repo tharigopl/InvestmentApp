@@ -47,7 +47,7 @@ function UserDetails() {
 //         const user = await getUserDetails(token, uid);
 //         //setFetchedAccounts(accounts);
 //         console.log("Inside  Get User Details 99999 ", user);
-//         userCtx.setuseraccount(user);
+//         userCtx.setUserAccount(user);
 //         console.log("Inside  Get User Details Auth  ", userCtx);
 //       } catch (error) {
 //         setError('Could not fetch user 1 details!');
@@ -66,7 +66,7 @@ function UserDetails() {
     return <LoadingOverlay />;
   }
   console.log("Inside  Get User Details Auth  ", userCtx);
-  const userDetail = userCtx.useraccount;
+  const userDetail = userCtx.userAccount;
   //const fetchedAccs = fetchedAccounts;
   
 

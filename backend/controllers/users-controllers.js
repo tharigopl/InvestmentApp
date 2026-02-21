@@ -350,7 +350,11 @@ const login = async (req, res, next) => {
     userId: existingUser.id,
     email: existingUser.email,
     stripeuser: existingUser.stripeuser,
-    token: token
+    token: token,
+    fname: existingUser.fname,
+    lname: existingUser.lname,
+    phone: existingUser.phoneno,
+    profileImage: existingUser.profileImage,
   });
 };
 

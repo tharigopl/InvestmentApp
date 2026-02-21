@@ -1,37 +1,59 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import { createContext, useEffect, useState } from 'react';
 
 export const UserContext = createContext({
-  useraccount: {},
-  setuseraccount: (useraccount) => {},
-  removeuseraccount: () => {},
+  userAccount: {},
+  setUserAccount: (userAccount) => {},
+  removeUserAccount: () => {},
 });
 
 function UserContextProvider({ children }) {
   
-  const [userAccount, setUserAccount] = useState();
+  const [userAccount, setUserAccountState] = useState(null);
 
-  function setuseraccount(useraccount) {
-    console.log("Settoing user ctx account in store ", useraccount);
+  function setUserAccount(userData) {
+    console.log("Setting user account:", userData);
     
-    setUserAccount(useraccount.user);
+    // Handle both formats for compatibility
+    // If data has .user property, use that, otherwise use data directly
+    const data = userData?.user || userData;
     
-    AsyncStorage.setItem('useraccount', useraccount);
-    console.log("Settoing user ctx account in store 12", userAccount);
+    setUserAccountState(data);
+    AsyncStorage.setItem('userAccount', JSON.stringify(data));
+    
+    console.log("User account set successfully");
   }
 
-  function removeuseraccount() {
-    console.log("Remove user Account ");
-    setUserAccount(null);
-    console.log("Remove user Account 1");
-    AsyncStorage.removeItem('useraccount');
+  function removeUserAccount() {
+    console.log("Removing user account");
+    setUserAccountState(null);
+    AsyncStorage.removeItem('userAccount');
   }
+  
+  // Load user account from AsyncStorage on mount
+  useEffect(() => {
+    const loadUserAccount = async () => {
+      try {
+        const storedAccount = await AsyncStorage.getItem('userAccount');
+        if (storedAccount) {
+          const parsedAccount = JSON.parse(storedAccount);
+          console.log("✅ Loaded user account from storage:", parsedAccount.fname, parsedAccount.email);
+          setUserAccountState(parsedAccount);
+        } else {
+          console.log("No stored user account found");
+        }
+      } catch (error) {
+        console.error("❌ Error loading user account:", error);
+      }
+    };
+    
+    loadUserAccount();
+  }, []);
 
   const value = {
-    useraccount: userAccount,
-    setuseraccount: setuseraccount,
-    removeuseraccount: removeuseraccount,
+    userAccount: userAccount,
+    setUserAccount: setUserAccount,
+    removeUserAccount: removeUserAccount,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
