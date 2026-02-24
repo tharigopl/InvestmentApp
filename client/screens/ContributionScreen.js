@@ -71,7 +71,9 @@ const ContributionScreen = ({ route, navigation }) => {
   };
 
   const handleSubmit = async () => {
+    console.log("Contribution screen handle submit ");
     const validation = validateContributionAmount(parseFloat(amount));
+    console.log("Contribution screen handle submit ", validation);
     if (!validation.valid) {
       Alert.alert('Invalid Amount', validation.error);
       return;
@@ -90,23 +92,25 @@ const ContributionScreen = ({ route, navigation }) => {
     const contributionAmount = parseFloat(amount);
     const remaining = event.targetAmount - event.currentAmount;
 
-    if (contributionAmount > remaining) {
-      Alert.alert(
-        'Amount Too High',
-        `This event only needs $${remaining.toFixed(2)} more to reach its goal.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Contribute $' + remaining.toFixed(2),
-            onPress: () => {
-              setAmount(remaining.toString());
-              setTimeout(() => handleSubmit(), 100);
-            },
-          },
-        ]
-      );
-      return;
-    }
+    console.log("Contribution screen handle submit 1 ", contributionAmount, remaining);
+
+    // if (contributionAmount > remaining) {
+    //   Alert.alert(
+    //     'Amount Too High',
+    //     `This event only needs $${remaining.toFixed(2)} more to reach its goal.`,
+    //     [
+    //       { text: 'Cancel', style: 'cancel' },
+    //       {
+    //         text: 'Contribute $' + remaining.toFixed(2),
+    //         onPress: () => {
+    //           setAmount(remaining.toString());
+    //           setTimeout(() => handleSubmit(), 100);
+    //         },
+    //       },
+    //     ]
+    //   );
+    //   return;
+    // }
 
     setIsProcessing(true);
 
@@ -203,6 +207,13 @@ const ContributionScreen = ({ route, navigation }) => {
   const remaining = event.targetAmount - event.currentAmount;
   const fees = amount ? calculateFees(parseFloat(amount)) : null;
 
+  console.log("Contribution Screen fees ", fees);
+  console.log("Contribution Screen Amount ", amount);
+  console.log("Contribution Screen Progress ", progress);
+  console.log("Contribution Screen remaining ", remaining);
+  console.log("Contribution Screen event.targetAmount ", event.targetAmount);
+  console.log("Contribution Screen event.currentAmount ", event.currentAmount);
+  
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

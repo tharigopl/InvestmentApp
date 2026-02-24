@@ -41,6 +41,12 @@ import EventDetails from './screens/EventDetails';
 import CreateInvestmentEvent from './screens/CreateInvestmentEvent';
 import ContributionScreen from './screens/ContributionScreen';
 
+//Event Invite Screens
+import EventTypeSelectionScreen from './screens/evite/EventTypeSelectionScreen';
+import DesignSelectionScreen from './screens/evite/DesignSelectionScreen';
+import ManageInvitesScreen from './screens/evite/ManageInvitesScreen';
+import CreateEventFlowScreen from './screens/evite/CreateEventFlowScreen';
+
 // Contexts & Components
 import AuthContextProvider, { AuthContext } from './store/auth-context';
 import StripeContextProvider, { StripeContext } from './store/stripe-context';
@@ -1097,9 +1103,29 @@ function AuthenticatedStack() {
         options={{ title: 'Group Chat' }}
       />
       <Stack.Screen 
-        name="EventFeedDirect" 
+        name="EventFeed" 
         component={EventFeed}
         options={{ title: 'Investment Events' }}
+      />
+      <Stack.Screen 
+        name="EventTypeSelection" 
+        component={EventTypeSelectionScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="DesignSelection" 
+        component={DesignSelectionScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="ManageInvites" 
+        component={ManageInvitesScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="CreateEventFlow" 
+        component={CreateEventFlowScreen}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );

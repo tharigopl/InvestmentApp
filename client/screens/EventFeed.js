@@ -174,7 +174,9 @@ const EventFeed = () => {
   };
 
   const renderEventCard = ({ item }) => {
+    console.log("Render Event Card currentAmount and targetAmount ", item.currentAmount, item.targetAmount);
     const progress = (item.currentAmount / item.targetAmount) * 100;
+    console.log("Render Event Card Progress ", progress);
     const isFullyFunded = progress >= 100;
     const statusInfo = getStatusInfo(item);
     const eventId = item._id || item.id;
@@ -252,28 +254,29 @@ const EventFeed = () => {
           )}
 
           {/* Progress Bar */}
-          <View style={styles.progressSection}>
-            <View style={styles.progressBar}>
-              <LinearGradient
-                colors={isFullyFunded ? ['#4ECDC4', '#44A08D'] : ['#FF6B6B', '#FF8E53']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[styles.progressFill, { width: `${Math.min(progress, 100)}%` }]}
-              />
+          {!Number.isNaN(progress) && (
+            <View style={styles.progressSection}>
+              <View style={styles.progressBar}>
+                <LinearGradient
+                  colors={isFullyFunded ? ['#4ECDC4', '#44A08D'] : ['#FF6B6B', '#FF8E53']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[styles.progressFill, { width: `${Math.min(progress, 100)}%` }]}
+                />
+              </View>
+              <View style={styles.progressInfo}>
+                <Text style={styles.progressText}>
+                  ${(item.currentAmount || 0).toFixed(0)} / ${(item.targetAmount || 0).toFixed(0)}
+                </Text>
+                <Text style={[
+                  styles.progressPercent,
+                  isFullyFunded && styles.progressPercentComplete
+                ]}>
+                  {progress.toFixed(0)}%
+                </Text>
+              </View>
             </View>
-            <View style={styles.progressInfo}>
-              <Text style={styles.progressText}>
-                ${(item.currentAmount || 0).toFixed(0)} / ${(item.targetAmount || 0).toFixed(0)}
-              </Text>
-              <Text style={[
-                styles.progressPercent,
-                isFullyFunded && styles.progressPercentComplete
-              ]}>
-                {progress.toFixed(0)}%
-              </Text>
-            </View>
-          </View>
-
+          )}
           {/* Contributors Count */}
           {item.contributors && item.contributors.length > 0 && (
             <View style={styles.contributorsRow}>
@@ -388,6 +391,11 @@ const EventFeed = () => {
       <TouchableOpacity style={styles.emptyButton} onPress={handleCreateEvent}>
         <Text style={styles.emptyButtonText}>Create Event</Text>
       </TouchableOpacity>
+      <TouchableOpacity  style={styles.emptyButton}
+        onPress={() => navigation.navigate('EventTypeSelection')}
+      >
+        <Text style={styles.emptyButtonText}>Create Event New</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -428,6 +436,19 @@ const EventFeed = () => {
 
       {/* Create Event FAB */}
       <TouchableOpacity style={styles.floatingButton} onPress={handleCreateEvent}>
+        <LinearGradient
+          colors={['#FF6B6B', '#FF8E53']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.fabGradient}
+        >
+          <Ionicons name="add" size={32} color="#fff" />
+        </LinearGradient>
+      </TouchableOpacity>
+      
+      <TouchableOpacity  style={styles.floatingButton}
+        onPress={() => navigation.navigate('EventTypeSelection')}
+      >
         <LinearGradient
           colors={['#FF6B6B', '#FF8E53']}
           start={{ x: 0, y: 0 }}

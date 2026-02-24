@@ -15,6 +15,8 @@ const messageRoutes = require("./routes/message-routes"); // ✅ ADDED
 const stockRoutes = require("./routes/stock-routes"); // ✅ ADDED (NEW)
 const eventRoutes = require("./routes/event-routes");
 const contactsRoutes = require('./routes/contacts-routes');  
+const eventInviteRoutes = require('./routes/event-invite-routes');
+const designRoutes = require('./routes/design-routes');
 
 // Import utilities
 const HttpError = require("./models/http-error");
@@ -156,11 +158,19 @@ app.use("/api/friends", friendsRoutes);         // Friend management
 app.use("/api/messages", messageRoutes);        // ✅ Messages & chat (ADDED)
 app.use("/api/stocks", stockRoutes);            // ✅ Stock data & trading (ADDED - NEW)
 app.use('/api/contacts', contactsRoutes); 
+app.use('/api/events', eventInviteRoutes);
 
 // TODO: Add these routes as you create them
    app.use("/api/events", eventRoutes);         // Investment events (TODO)
 // app.use("/api/contributions", contributionRoutes);  // Contributions (TODO)
 // app.use("/api/portfolio", portfolioRoutes);   // User portfolio (TODO)
+
+// Add route
+app.use('/api/designs', designRoutes);
+
+
+// Serve uploaded files
+app.use('/uploads', express.static('uploads'));
 
 // ============================================
 // ERROR HANDLING

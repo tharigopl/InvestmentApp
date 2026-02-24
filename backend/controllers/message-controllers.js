@@ -6,7 +6,8 @@ const mongoose = require('mongoose');
 const HttpError = require('../models/http-error');
 
 const Message = require('../models/message');
-const InvestmentEvent = require('../models/investment-event');
+//const InvestmentEvent = require('../models/investment-event');
+const InvestmentEvent = require('../models/event');
 const EventParticipant = require('../models/event-participant');
 const User = require('../models/user');
 const { getIO } = require('../socket/socket-server');

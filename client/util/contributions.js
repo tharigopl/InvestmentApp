@@ -139,6 +139,8 @@ export function calculateFees(amount) {
     netAmount: parseFloat(netAmount.toFixed(2)),
     stripeFeePercentage: stripeFeePercentage * 100,
     stripeFeeFixed: stripeFeeFixed,
+    totalFee: amount - stripeFee, 
+    total : netAmount,
   };
 }
 

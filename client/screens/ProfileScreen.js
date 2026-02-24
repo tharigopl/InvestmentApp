@@ -227,7 +227,7 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handleViewEvents = () => {
-    navigation.navigate('EventFeedDirect');
+    navigation.navigate('EventFeed');
     // navigation.navigate('InvestmentEvents', {            
     //     screen: 'EventFeedTab',      
     // });

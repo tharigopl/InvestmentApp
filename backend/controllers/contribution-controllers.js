@@ -1,6 +1,7 @@
 const { StripeCustomer, StripePaymentIntent } = require('../models/stripe-models');
 const Contribution = require('../models/contribution');
-const InvestmentEvent = require('../models/investment-event');
+//const InvestmentEvent = require('../models/investment-event');
+const InvestmentEvent = require('../models/event');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // Create contribution payment

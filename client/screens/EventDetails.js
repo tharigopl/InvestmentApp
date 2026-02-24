@@ -11,6 +11,9 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+// /import MapView, { Marker } from 'react-native-maps';
+ import LocationMap from '../components/LocationMap';
+
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlobalStyles } from '../constants/styles';
@@ -126,7 +129,11 @@ const EventDetails = ({ route, navigation }) => {
     );
   }
 
-  const progress = (event.currentAmount / event.targetAmount) * 100;
+  let progress = (event.currentAmount / event.targetAmount) * 100;
+  console.log("EventDetails progress ", progress, event.currentAmount, event.targetAmount);
+  if(Number.isNaN(progress)){
+    progress = event.currentAmount;
+  }
   const remaining = event.targetAmount - event.currentAmount;
   const isFullyFunded = progress >= 100;
   const isCreator = event.createdBy?._id === currentUserId || event.createdBy === currentUserId;
@@ -216,7 +223,14 @@ const EventDetails = ({ route, navigation }) => {
         </View>
       </View>
 
-      <View style={styles.content}>
+      <View style={styles.content}>        
+        {event.design?.customImageUrl && (
+          <Image 
+            source={{ uri: event.design.customImageUrl }}
+            style={styles.designImage}
+            resizeMode="cover"
+          />
+        )}
         {/* Event Type */}
         {event.eventType && (
           <View style={styles.infoRow}>
@@ -246,6 +260,106 @@ const EventDetails = ({ route, navigation }) => {
           <View style={styles.descriptionContainer}>
             <Text style={styles.descriptionTitle}>About</Text>
             <Text style={styles.descriptionText}>{event.description}</Text>
+          </View>
+        )}
+
+        {/* Add location section */}
+        <LocationMap location={event.location} />
+         {/*{event.location?.address && (
+          <View style={styles.locationSection}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="location" size={24} color="#FF6B6B" />
+              <Text style={styles.sectionTitle}>Location</Text>
+            </View>
+            
+            <View style={styles.locationCard}>
+              {event.location.venueName && (
+                <Text style={styles.venueName}>{event.location.venueName}</Text>
+              )}
+              
+              <Text style={styles.address}>
+                {event.location.address}
+                {event.location.city && `, ${event.location.city}`}
+                {event.location.state && `, ${event.location.state}`}
+              </Text>
+              
+              <TouchableOpacity 
+                style={styles.directionsButton}
+                onPress={() => {
+                  const destination = encodeURIComponent(
+                    `${event.location.address}${event.location.city ? `, ${event.location.city}` : ''}`
+                  );
+                  
+                  if (Platform.OS === 'web') {
+                    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${destination}`);
+                  } else if (Platform.OS === 'ios') {
+                    Linking.openURL(`maps://app?daddr=${destination}`);
+                  } else {
+                    Linking.openURL(`google.navigation:q=${destination}`);
+                  }
+                }}
+              >
+                <Ionicons name="navigate" size={18} color="#4ECDC4" />
+                <Text style={styles.directionsText}>Get Directions</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}*/}
+        
+        {/* Add RSVP stats section */}
+        {event.guestList && event.guestList.length > 0 && (
+          <View style={styles.rsvpSection}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="people" size={24} color="#4ECDC4" />
+              <Text style={styles.sectionTitle}>Guest List</Text>
+            </View>
+            
+            {/* RSVP Summary */}
+            <View style={styles.rsvpSummary}>
+              <View style={styles.rsvpStat}>
+                <Text style={styles.rsvpNumber}>
+                  {event.guestList.filter(g => g.rsvpStatus === 'going').length}
+                </Text>
+                <Text style={styles.rsvpLabel}>Going</Text>
+              </View>
+              
+              <View style={styles.rsvpStat}>
+                <Text style={styles.rsvpNumber}>
+                  {event.guestList.filter(g => g.rsvpStatus === 'maybe').length}
+                </Text>
+                <Text style={styles.rsvpLabel}>Maybe</Text>
+              </View>
+              
+              <View style={styles.rsvpStat}>
+                <Text style={styles.rsvpNumber}>
+                  {event.guestList.filter(g => g.rsvpStatus === 'pending').length}
+                </Text>
+                <Text style={styles.rsvpLabel}>Pending</Text>
+              </View>
+              
+              <View style={styles.rsvpStat}>
+                <Text style={styles.rsvpNumber}>{event.guestList.length}</Text>
+                <Text style={styles.rsvpLabel}>Total</Text>
+              </View>
+            </View>
+            
+            {/* Manage Invites Button (if host) */}
+            {isHost && (
+              <TouchableOpacity
+                style={styles.manageInvitesButton}
+                onPress={() => navigation.navigate('ManageInvites', { eventId: event._id })}
+              >
+                <LinearGradient
+                  colors={['#4ECDC4', '#44A08D']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.manageInvitesGradient}
+                >
+                  <Ionicons name="settings" size={20} color="#fff" />
+                  <Text style={styles.manageInvitesText}>Manage Guests</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -788,6 +902,125 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     color: '#FF6B6B',
+  },
+  designImage: {
+    width: '100%',
+    height: 200,
+    marginBottom: 16,
+  },
+  
+  locationSection: {
+    marginBottom: 24,
+  },
+  
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+  },
+  
+  locationCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+  },
+  
+  venueName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 4,
+  },
+  
+  address: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  
+  map: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    marginVertical: 12,
+  },
+  
+  directionsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 8,
+    marginTop: 8,
+    backgroundColor: '#F0FFFE',
+    borderRadius: 8,
+  },
+  
+  directionsText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#4ECDC4',
+  },
+  
+  rsvpSection: {
+    marginBottom: 24,
+  },
+  
+  rsvpSummary: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    marginBottom: 12,
+  },
+  
+  rsvpStat: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  
+  rsvpNumber: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#4ECDC4',
+    marginBottom: 4,
+  },
+  
+  rsvpLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+  },
+  
+  manageInvitesButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  
+  manageInvitesGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    gap: 8,
+  },
+  
+  manageInvitesText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
   },
 });
 

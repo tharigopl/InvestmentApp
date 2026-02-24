@@ -13,7 +13,8 @@ const {
   StripeWebhookEvent,
 } = require("../models/stripe-models");
 const Contribution = require("../models/contribution");
-const InvestmentEvent = require("../models/investment-event");
+//const InvestmentEvent = require("../models/investment-event");
+const InvestmentEvent = require('../models/event');
 
 
 // ============================================

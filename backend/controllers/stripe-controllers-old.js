@@ -19,7 +19,8 @@ const { StripeCustomer,
  } = require("../models/stripe-models");
 
 const Contribution = require("../models/contribution");
-const InvestmentEvent = require("../models/investment-event");
+//const InvestmentEvent = require("../models/investment-event");
+const InvestmentEvent = require('../models/event');
 
 const createStAccount = async (req, res, next) => {
   console.log("CreaTE Stripe Account1", req.query.country);
