@@ -6,10 +6,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
-  Alert,
+  ActivityIndicator,  
   Linking,
 } from 'react-native';
+import { showAlert } from '../util/platform-alert';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import apiClient from '../util/api-client';
@@ -57,7 +57,7 @@ const PurchaseStocks = ({ route, navigation }) => {
       setStockPrices(prices);
     } catch (error) {
       console.error('❌ Error loading stock prices:', error);
-      Alert.alert('Note', 'Using estimated stock prices');
+      showAlert('Note', 'Using estimated stock prices');
     } finally {
       setIsLoading(false);
     }
@@ -72,7 +72,7 @@ const PurchaseStocks = ({ route, navigation }) => {
   const handleManualPurchase = () => {
     const stockList = event.selectedInvestments.map(s => `• ${s.symbol}`).join('\n');
     
-    Alert.alert(
+    showAlert(
       '📱 Time to Shop!',
       `Open your favorite brokerage app and buy these stocks:\n\n${stockList}\n\nDone? Come back and hit "Mark as Purchased"! 🎯`,
       [{ text: 'Got It!', style: 'default' }]
@@ -88,7 +88,7 @@ const PurchaseStocks = ({ route, navigation }) => {
       // Add more as needed
     };
     
-    Alert.alert(
+    showAlert(
       'Open Brokerage App',
       'Which app would you like to use?',
       [
@@ -106,16 +106,16 @@ const PurchaseStocks = ({ route, navigation }) => {
       if (supported) {
         await Linking.openURL(appUrl);
       } else {
-        Alert.alert('App Not Installed', 'Please install the app or use your browser');
+        showAlert('App Not Installed', 'Please install the app or use your browser');
       }
     } catch (error) {
       console.error('Error opening app:', error);
-      Alert.alert('Error', 'Could not open app');
+      showAlert('Error', 'Could not open app');
     }
   };
 
   const handleConfirmPurchase = () => {
-    Alert.alert(
+    showAlert(
       '✅ All Done?',
       'Mark these stocks as purchased? This will update the event and notify the recipient! 🎉',
       [
@@ -138,14 +138,14 @@ const PurchaseStocks = ({ route, navigation }) => {
               
               console.log('✅ Stocks marked as purchased:', response.data);
               
-              Alert.alert(
+              showAlert(
                 '🎊 Woohoo!',
                 response.data.message || 'Stocks marked as purchased! The recipient will be so excited! 🎁',
                 [{ text: 'Awesome!', onPress: () => navigation.navigate('EventFeed') }]
               );
             } catch (error) {
               console.error('❌ Mark purchased error:', error);
-              Alert.alert(
+              showAlert(
                 'Oops!', 
                 error.response?.data?.message || 'Failed to update event'
               );
@@ -349,7 +349,7 @@ const PurchaseStocks = ({ route, navigation }) => {
         ) : (
           <TouchableOpacity
             style={styles.comingSoonButton}
-            onPress={() => Alert.alert('Coming Soon!', 'Auto-buy feature is in development! 🚧')}
+            onPress={() => showAlert('Coming Soon!', 'Auto-buy feature is in development! 🚧')}
           >
             <Ionicons name="construct" size={24} color="#FFD93D" />
             <Text style={styles.comingSoonButtonText}>In Development 🚧</Text>

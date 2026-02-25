@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Share,
+  Platform,
 } from 'react-native';
 // /import MapView, { Marker } from 'react-native-maps';
  import LocationMap from '../components/LocationMap';
@@ -91,9 +93,66 @@ const EventDetails = ({ route, navigation }) => {
     );
   };
 
-  const handleShare = () => {
-    // TODO: Implement share functionality
-    Alert.alert('Share Event', 'Share functionality coming soon!');
+  const handleShare = async () => {
+    try {
+      // Create share URL (adjust domain as needed)
+      const eventUrl = Platform.OS === 'web' 
+        ? `${window.location.origin}/event/${eventId}`
+        : `https://localhost:8081/event/${eventId}`;
+      
+      const shareMessage = `🎉 You're invited to ${event.eventTitle || event.title}!
+  
+  For: ${event.recipientName || 
+       (event.recipientUser && `${event.recipientUser.fname} ${event.recipientUser.lname}`) || 
+       'Someone special'}
+  📅 Date: ${event.eventDate ? new Date(event.eventDate).toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      }) : 'TBD'}
+  ${event.location?.address ? `📍 Location: ${event.location.address}` : ''}
+  
+  ${event.hasGoal && event.targetAmount > 0 
+    ? `💰 Goal: $${event.targetAmount} (${progress.toFixed(0)}% funded)`
+    : `💰 Total Raised: $${event.currentAmount || 0}`}
+  
+  Join us! ${eventUrl}`;
+  
+      if (Platform.OS === 'web') {
+        // Web: Use Web Share API if available, otherwise copy to clipboard
+        if (navigator.share) {
+          await navigator.share({
+            title: event.eventTitle || event.title,
+            text: shareMessage,
+            url: eventUrl,
+          });
+        } else {
+          // Fallback: Copy to clipboard
+          await navigator.clipboard.writeText(shareMessage);
+          Alert.alert('Copied!', 'Event details copied to clipboard');
+        }
+      } else {
+        // Mobile: Use React Native Share
+        const result = await Share.share({
+          message: shareMessage,
+          url: eventUrl, // iOS only
+          title: event.eventTitle || event.title,
+        });
+  
+        if (result.action === Share.sharedAction) {
+          if (result.activityType) {
+            console.log('Shared via:', result.activityType);
+          } else {
+            console.log('Shared successfully');
+          }
+        } else if (result.action === Share.dismissedAction) {
+          console.log('Share dismissed');
+        }
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+      Alert.alert('Error', 'Failed to share event. Please try again.');
+    }
   };
 
   if (isLoading) {
@@ -129,13 +188,24 @@ const EventDetails = ({ route, navigation }) => {
     );
   }
 
-  let progress = (event.currentAmount / event.targetAmount) * 100;
-  console.log("EventDetails progress ", progress, event.currentAmount, event.targetAmount);
-  if(Number.isNaN(progress)){
-    progress = event.currentAmount;
+  // Calculate progress safely
+  let progress = 0;
+  let remaining = 0;
+  let isFullyFunded = false;
+  const hasGoal = event.hasGoal && event.targetAmount > 0;
+
+  if (hasGoal) {
+    progress = (event.currentAmount / event.targetAmount) * 100;
+    remaining = event.targetAmount - event.currentAmount;
+    isFullyFunded = progress >= 100;
+  } else {
+    // Goalless event - no progress percentage
+    progress = 0;
+    remaining = 0;
+    isFullyFunded = false;
   }
-  const remaining = event.targetAmount - event.currentAmount;
-  const isFullyFunded = progress >= 100;
+
+  console.log("EventDetails progress", progress, event.currentAmount, event.targetAmount, "hasGoal:", hasGoal);
   const isCreator = event.createdBy?._id === currentUserId || event.createdBy === currentUserId;
   const daysLeft = event.deadline
     ? Math.ceil((new Date(event.deadline) - new Date()) / (1000 * 60 * 60 * 24))
@@ -364,59 +434,91 @@ const EventDetails = ({ route, navigation }) => {
         )}
 
         {/* Progress Section */}
-        <View style={styles.progressSection}>
-          <Text style={styles.sectionTitle}>Funding Progress</Text>
-          
-          <View style={styles.progressBar}>
-            <LinearGradient
-              colors={isFullyFunded ? ['#4ECDC4', '#44A08D'] : ['#FF6B6B', '#FF8E53']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[styles.progressFill, { width: `${Math.min(progress, 100)}%` }]}
-            />
-          </View>
-          
-          <View style={styles.progressStats}>
-            <View style={styles.progressStat}>
-              <Text style={styles.progressStatValue}>
-                ${event.currentAmount?.toFixed(2) || '0.00'}
-              </Text>
-              <Text style={styles.progressStatLabel}>Raised</Text>
-            </View>
+        {(event.registryType === 'stock' || event.registryType === 'cash_fund') && (
+          <View style={styles.progressSection}>
+            <Text style={styles.sectionTitle}>
+              {event.hasGoal ? 'Funding Progress' : 'Total Contributions'}
+            </Text>
             
-            <View style={styles.progressStat}>
-              <Text style={[styles.progressStatValue, isFullyFunded && styles.statValueComplete]}>
-                {progress.toFixed(0)}%
-              </Text>
-              <Text style={styles.progressStatLabel}>Funded</Text>
-            </View>
+            {event.hasGoal && event.targetAmount > 0 ? (
+              // WITH GOAL: Show progress bar
+              <>
+                <View style={styles.progressBar}>
+                  <LinearGradient
+                    colors={isFullyFunded ? ['#4ECDC4', '#44A08D'] : ['#FF6B6B', '#FF8E53']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.progressFill, { width: `${Math.min(progress, 100)}%` }]}
+                  />
+                </View>
+                
+                <View style={styles.progressStats}>
+                  <View style={styles.progressStat}>
+                    <Text style={styles.progressStatValue}>
+                      ${event.currentAmount?.toFixed(2) || '0.00'}
+                    </Text>
+                    <Text style={styles.progressStatLabel}>Raised</Text>
+                  </View>
+                  
+                  <View style={styles.progressStat}>
+                    <Text style={[styles.progressStatValue, isFullyFunded && styles.statValueComplete]}>
+                      {progress.toFixed(0)}%
+                    </Text>
+                    <Text style={styles.progressStatLabel}>Funded</Text>
+                  </View>
+                  
+                  <View style={styles.progressStat}>
+                    <Text style={styles.progressStatValue}>
+                      ${event.targetAmount?.toFixed(2) || '0.00'}
+                    </Text>
+                    <Text style={styles.progressStatLabel}>Goal</Text>
+                  </View>
+                </View>
+              </>
+            ) : (
+              // WITHOUT GOAL: Show total raised
+              <View style={styles.goallessProgress}>
+                <View style={styles.totalRaisedContainer}>
+                  <Text style={styles.totalRaisedAmount}>
+                    ${(event.currentAmount || 0).toFixed(2)}
+                  </Text>
+                  <Text style={styles.totalRaisedLabel}>Total Raised</Text>
+                </View>
+                
+                <View style={styles.contributorCount}>
+                  <Ionicons name="people" size={20} color="#4ECDC4" />
+                  <Text style={styles.contributorText}>
+                    {contributions.length} contribution{contributions.length !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+              </View>
+            )}
             
-            <View style={styles.progressStat}>
-              <Text style={styles.progressStatValue}>
-                ${event.targetAmount?.toFixed(2) || '0.00'}
-              </Text>
-              <Text style={styles.progressStatLabel}>Goal</Text>
-            </View>
+            {/* Contributors List (same for both) */}
+            {contributions.length > 0 && (
+              <View style={styles.contributorsSection}>
+                <Text style={styles.contributorsTitle}>Recent Contributors</Text>
+                {contributions.slice(0, 5).map((contribution, index) => (
+                  <View key={index} style={styles.contributorItem}>
+                    <View style={styles.contributorAvatar}>
+                      <Text style={styles.contributorInitial}>
+                        {contribution.contributorName?.charAt(0).toUpperCase() || '?'}
+                      </Text>
+                    </View>
+                    <View style={styles.contributorInfo}>
+                      <Text style={styles.contributorName}>
+                        {contribution.contributorName || 'Anonymous'}
+                      </Text>
+                      <Text style={styles.contributorAmount}>
+                        ${contribution.amount?.toFixed(2) || '0.00'}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
-
-          {!isFullyFunded && remaining > 0 && (
-            <View style={styles.remainingBanner}>
-              <Ionicons name="information-circle" size={20} color="#FF6B6B" />
-              <Text style={styles.remainingText}>
-                ${remaining.toFixed(2)} more needed to reach the goal
-              </Text>
-            </View>
-          )}
-
-          {daysLeft !== null && daysLeft > 0 && event.status === 'active' && (
-            <View style={styles.daysLeftBanner}>
-              <Ionicons name="time" size={20} color="#FF6B6B" />
-              <Text style={styles.daysLeftText}>
-                {daysLeft} {daysLeft === 1 ? 'day' : 'days'} remaining
-              </Text>
-            </View>
-          )}
-        </View>
+        )}
 
         {/* Selected Investments */}
         {event.selectedInvestments && event.selectedInvestments.length > 0 && (
@@ -528,9 +630,14 @@ const EventDetails = ({ route, navigation }) => {
 
           {/* Secondary Actions */}
           <View style={styles.secondaryActions}>
-            <TouchableOpacity style={styles.secondaryButton} onPress={handleShare}>
-              <Ionicons name="share-social" size={20} color="#666" />
-              <Text style={styles.secondaryButtonText}>Share</Text>
+            <TouchableOpacity
+              style={styles.shareButton} 
+              onPress={handleShare}
+            >
+              <View style={styles.shareButtonContent}>
+                <Ionicons name="share-social" size={20} color="#4ECDC4" />
+                <Text style={styles.shareButtonText}>Share Event</Text>
+              </View>
             </TouchableOpacity>
             
             {isCreator && event.status === 'active' && (
@@ -1021,6 +1128,80 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#fff',
+  },
+  noGoalSubtext: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  amountRaised: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#4ECDC4',
+  },
+  goallessProgress: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  
+  totalRaisedContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  
+  totalRaisedAmount: {
+    fontSize: 48,
+    fontWeight: '800',
+    color: '#4ECDC4',
+    marginBottom: 4,
+  },
+  
+  totalRaisedLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  
+  contributorCount: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#F0FFFE',
+    borderRadius: 20,
+  },
+  
+  contributorText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  shareButton: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#4ECDC4',
+    paddingVertical: 14,
+    marginTop: 16,
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  
+  shareButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  
+  shareButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#4ECDC4',
   },
 });
 

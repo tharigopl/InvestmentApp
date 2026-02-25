@@ -174,10 +174,21 @@ const EventFeed = () => {
   };
 
   const renderEventCard = ({ item }) => {
-    console.log("Render Event Card currentAmount and targetAmount ", item.currentAmount, item.targetAmount);
-    const progress = (item.currentAmount / item.targetAmount) * 100;
-    console.log("Render Event Card Progress ", progress);
-    const isFullyFunded = progress >= 100;
+    console.log("Render Event Card currentAmount and targetAmount", item.currentAmount, item.targetAmount);
+  
+    // Calculate progress safely
+    const hasGoal = item.hasGoal && item.targetAmount > 0;
+    let progress = 0;
+    
+    if (hasGoal) {
+      progress = (item.currentAmount / item.targetAmount) * 100;
+    } else {
+      // Goalless event - show 0%
+      progress = 0;
+    }
+    
+    console.log("Render Event Card Progress", progress, "hasGoal:", hasGoal);
+    const isFullyFunded = hasGoal && progress >= 100;
     const statusInfo = getStatusInfo(item);
     const eventId = item._id || item.id;
     const daysLeft = item.deadline
@@ -253,30 +264,47 @@ const EventFeed = () => {
             </View>
           )}
 
-          {/* Progress Bar */}
-          {!Number.isNaN(progress) && (
+          {/* Progress Bar - Only show for stock/cash fund */}
+          {(item.registryType === 'stock' || item.registryType === 'cash_fund') && (
             <View style={styles.progressSection}>
-              <View style={styles.progressBar}>
-                <LinearGradient
-                  colors={isFullyFunded ? ['#4ECDC4', '#44A08D'] : ['#FF6B6B', '#FF8E53']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={[styles.progressFill, { width: `${Math.min(progress, 100)}%` }]}
-                />
-              </View>
-              <View style={styles.progressInfo}>
-                <Text style={styles.progressText}>
-                  ${(item.currentAmount || 0).toFixed(0)} / ${(item.targetAmount || 0).toFixed(0)}
-                </Text>
-                <Text style={[
-                  styles.progressPercent,
-                  isFullyFunded && styles.progressPercentComplete
-                ]}>
-                  {progress.toFixed(0)}%
-                </Text>
-              </View>
+              {hasGoal && item.targetAmount > 0 ? (
+                // WITH GOAL: Show progress bar
+                <>
+                  <View style={styles.progressBar}>
+                    <LinearGradient
+                      colors={isFullyFunded ? ['#4ECDC4', '#44A08D'] : ['#FF6B6B', '#FF8E53']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={[styles.progressFill, { width: `${Math.min(progress, 100)}%` }]}
+                    />
+                  </View>
+                  <View style={styles.progressInfo}>
+                    <Text style={styles.progressText}>
+                      ${(item.currentAmount || 0).toFixed(0)} / ${(item.targetAmount || 0).toFixed(0)}
+                    </Text>
+                    <Text style={[
+                      styles.progressPercent,
+                      isFullyFunded && styles.progressPercentComplete
+                    ]}>
+                      {progress.toFixed(0)}%
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                // WITHOUT GOAL: Show total raised
+                <View style={styles.goallessInfo}>
+                  <Ionicons name="gift-outline" size={18} color="#4ECDC4" />
+                  <Text style={styles.goallessText}>
+                    ${(item.currentAmount || 0).toFixed(0)} raised
+                  </Text>
+                  <Text style={styles.contributorCountText}>
+                    • {item.contributors?.length || 0} contributor{(item.contributors?.length || 0) !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+              )}
             </View>
           )}
+
           {/* Contributors Count */}
           {item.contributors && item.contributors.length > 0 && (
             <View style={styles.contributorsRow}>
@@ -754,6 +782,24 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  goallessInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+  },
+  
+  goallessText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#4ECDC4',
+  },
+  
+  contributorCountText: {
+    fontSize: 13,
+    color: '#666',
+    marginLeft: 4,
   },
 });
 

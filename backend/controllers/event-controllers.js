@@ -191,15 +191,8 @@ const createEvent = async (req, res) => {
     console.log('Creating event with data:', req.body);
 
     const {
-      eventType,
-      eventTitle,
-      eventDate,
-      eventTime,
-      eventDescription,
-      targetAmount,
-      contributionDeadline,
-      design,
-      location,
+      eventType, eventTitle, eventDate, eventTime, eventDescription,
+      targetAmount, contributionDeadline, design, location,
       registryType,
       selectedInvestments,
       externalRegistry,
@@ -209,6 +202,7 @@ const createEvent = async (req, res) => {
       maxPlusOnes,
       rsvpDeadline,
       status,
+      hasGoal,
     } = req.body;
 
     // Validate only truly required fields
@@ -218,7 +212,13 @@ const createEvent = async (req, res) => {
         required: ['eventType', 'eventTitle', 'eventDate', 'recipientUser'],
       });
     }
-
+    
+    // Determine if event has a goal
+    const eventHasGoal = hasGoal !== undefined ? hasGoal : (
+      registryType === 'stock' || 
+      (registryType === 'cash_fund' && targetAmount && targetAmount > 0)
+    );
+    
     // Create event with all fields
     const newEvent = new InvestmentEvent({
       // Basic info
@@ -229,7 +229,9 @@ const createEvent = async (req, res) => {
       eventDescription: eventDescription || '',
       
       // Financial
-      targetAmount: parseFloat(targetAmount) || 0,
+      // Handle optional goal
+      targetAmount: eventHasGoal ? (parseFloat(targetAmount) || 0) : 0,
+      hasGoal: eventHasGoal,
       currentAmount: 0,
       contributionDeadline: contributionDeadline || eventDate,
       
@@ -1034,6 +1036,27 @@ const getUserEvents = async (req, res, next) => {
   }
 };
 
+// Update event status after using the funds collected
+const updateEventStatus = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { status, purchaseDate } = req.body;
+    
+    const event = await Event.findByIdAndUpdate(
+      eventId,
+      { 
+        status,
+        purchaseDate: purchaseDate || new Date(),
+      },
+      { new: true }
+    );
+    
+    res.json({ message: 'Status updated', event });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to update status' });
+  }
+};
+
 // const getUserEvents = async (req, res, next) => {
 //   try {
 //     const { userId } = req.params;
@@ -1169,4 +1192,5 @@ module.exports = {
   initiateWithdrawal,
   markStocksPurchased,
   getUserEvents,
+  updateEventStatus,
 };

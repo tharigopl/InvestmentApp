@@ -6,10 +6,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
-  Alert,
+  ActivityIndicator,  
   Platform,
 } from 'react-native';
+import { showAlert } from '../util/platform-alert';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import apiClient from '../util/api-client';
@@ -52,7 +52,7 @@ const ManageEventFunds = ({ route, navigation }) => {
       });
     } catch (error) {
       console.error('❌ Error loading event:', error);
-      Alert.alert(
+      showAlert(
         'Oops!', 
         'Failed to load event data. Please try again.',
         [{ text: 'OK', onPress: () => navigation.goBack() }]
@@ -74,7 +74,7 @@ const ManageEventFunds = ({ route, navigation }) => {
   const handleWithdrawFunds = async () => {
     const fees = calculateFees();
     
-    Alert.alert(
+    showAlert(
       '💰 Withdraw Funds',
       `Ready to withdraw $${fees.netAmount.toFixed(2)}?\n\nThe money will go to your bank account so you can buy stocks for ${event.recipientUser.fname}! 🎉`,
       [
@@ -90,14 +90,14 @@ const ManageEventFunds = ({ route, navigation }) => {
               const response = await apiClient.post(`/events/${eventId}/initiate-withdrawal`);
               console.log('✅ Withdrawal initiated:', response.data);
               
-              Alert.alert(
+              showAlert(
                 '🎊 Withdrawal Started!',
                 response.data.message || 'Money is on its way to your bank (2-3 days). Time to shop for stocks! 📈',
                 [{ text: 'Sweet!', onPress: () => navigation.goBack() }]
               );
             } catch (error) {
               console.error('❌ Withdrawal error:', error);
-              Alert.alert(
+              showAlert(
                 'Oops!', 
                 error.response?.data?.message || 'Failed to initiate withdrawal. Please try again.'
               );

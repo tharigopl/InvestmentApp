@@ -68,6 +68,7 @@ export default function CreateEventFlowScreen({ route, navigation }) {
     allowPlusOnes: false,
     maxPlusOnes: 1,
     rsvpDeadline: null,
+    hasGoal: true,
   });
 
   const [isCreating, setIsCreating] = useState(false);
@@ -81,10 +82,24 @@ export default function CreateEventFlowScreen({ route, navigation }) {
       case 2:
         return true; // Optional fields
       case 3:
+        // All registry types can be goalless now!
         if (eventData.registryType === 'stock') {
-          return eventData.selectedInvestments.length > 0 && eventData.targetAmount > 0;
-        }
-        return true;
+            // Stock needs investments selected
+            // Goal is optional
+            if (eventData.hasGoal) {
+               return eventData.selectedInvestments.length > 0 && eventData.targetAmount > 0;
+            }
+               return eventData.selectedInvestments.length > 0;
+            }
+            if (eventData.registryType === 'cash_fund') {
+              // Cash fund needs name
+              // Goal is optional
+              if (eventData.hasGoal) {
+                return eventData.cashFund.fundName && eventData.targetAmount > 0;
+              }
+                return eventData.cashFund.fundName;
+            }
+        return true;  // No registry or Amazon
       case 4:
         return true; // Optional - can invite later
       case 5:
@@ -129,7 +144,9 @@ export default function CreateEventFlowScreen({ route, navigation }) {
         eventTime: eventData.eventTime,
         eventDescription: eventData.description,
         
-        targetAmount: parseFloat(eventData.targetAmount) || 0,
+        // Handle optional goal
+        hasGoal: eventData.hasGoal,
+        targetAmount: eventData.hasGoal ? parseFloat(eventData.targetAmount) || 0 : 0,
         contributionDeadline: eventData.rsvpDeadline || new Date(eventData.eventDate),
         
         // Design
@@ -170,20 +187,39 @@ export default function CreateEventFlowScreen({ route, navigation }) {
       }
 
       if (Platform.OS === 'web' && typeof window !== 'undefined' && window.confirm) {
-        navigation.navigate('EventFeed');
+        
+        navigation.reset({
+	              index: 0,
+	              routes: [{ name: 'EventFeed' }],
+	            });
       } else {
         // Mobile - use Alert with Promise
         Alert.alert(
             '🎉 Event Created!',
             `${eventData.eventTitle} has been created successfully!`,
-            [
-              {
-                text: 'View Event',
-                onPress: () => {
-                    navigation.navigate('EventFeed');                
-                },
-              },
-            ]
+	      [
+	        {
+	          text: 'Done',
+	          onPress: () => {
+	            navigation.reset({
+	              index: 0,
+	              routes: [{ name: 'EventFeed' }],
+	            });
+	          },
+	        },
+	        {
+	          text: 'View Event',
+	          onPress: () => {
+	            navigation.reset({
+	              index: 0,
+	              routes: [{ name: 'EventFeed' }],
+	            });
+	            setTimeout(() => {
+	              navigation.navigate('EventDetails', { eventId: createdEvent._id });
+	            }, 100);
+	          },
+	        },
+	      ]
           );
       }
 
@@ -194,6 +230,86 @@ export default function CreateEventFlowScreen({ route, navigation }) {
       setIsCreating(false);
     }
   };
+
+//   const handleCreateEvent = async () => {
+//     try {
+//       setIsCreating(true);
+
+//       // Prepare event payload
+//       const payload = {
+//         eventType: eventData.eventType,
+//         eventTitle: eventData.eventTitle,
+//         eventDate: eventData.eventDate.toISOString(),
+//         eventTime: eventData.eventTime,
+//         eventDescription: eventData.description,
+        
+//         // Handle optional goal
+//         hasGoal: eventData.hasGoal,
+//         targetAmount: eventData.hasGoal ? parseFloat(eventData.targetAmount) || 0 : 0,
+//         contributionDeadline: eventData.rsvpDeadline || new Date(eventData.eventDate),
+        
+//         // Design
+//         design: eventData.design,
+        
+//         // Location
+//         location: eventData.location.address ? eventData.location : undefined,
+        
+//         // Registry
+//         registryType: eventData.registryType,
+//         selectedInvestments: eventData.selectedInvestments,
+//         externalRegistry: eventData.externalRegistry.registryUrl ? eventData.externalRegistry : undefined,
+//         cashFund: eventData.cashFund.fundName ? eventData.cashFund : undefined,
+        
+//         // Recipient (yourself for now)
+//         recipientUser: userCtx.userAccount._id,
+        
+//         // Settings
+//         allowPlusOnes: eventData.allowPlusOnes,
+//         maxPlusOnes: eventData.maxPlusOnes,
+//         rsvpDeadline: eventData.rsvpDeadline,
+        
+//         status: 'active',
+//       };
+
+//       // Create event
+//       const response = await apiClient.post('/events', payload);
+//       const createdEvent = response.data.event || response.data;
+
+//       // If guests were selected, send invites
+//       if (eventData.invitedUsers.length > 0 || eventData.guestList.length > 0) {
+//         const guests = [
+//           ...eventData.invitedUsers.map(userId => ({ userId })),
+//           ...eventData.guestList.map(guest => ({ email: guest.email, name: guest.name, phone: guest.phone })),
+//         ];
+
+//         await apiClient.post(`/events/${createdEvent._id}/invite`, { guests });
+//       }
+
+//       if (Platform.OS === 'web' && typeof window !== 'undefined' && window.confirm) {
+//         navigation.navigate('EventFeed');
+//       } else {
+//         // Mobile - use Alert with Promise
+//         Alert.alert(
+//             '🎉 Event Created!',
+//             `${eventData.eventTitle} has been created successfully!`,
+//             [
+//               {
+//                 text: 'View Event',
+//                 onPress: () => {
+//                     navigation.navigate('EventFeed');                
+//                 },
+//               },
+//             ]
+//           );
+//       }
+
+//     } catch (error) {
+//       console.error('Error creating event:', error);
+//       Alert.alert('Error', error.response?.data?.message || 'Failed to create event');
+//     } finally {
+//       setIsCreating(false);
+//     }
+//   };
 
   const renderProgressBar = () => (
     <View style={styles.progressContainer}>
@@ -506,7 +622,7 @@ export default function CreateEventFlowScreen({ route, navigation }) {
                 style={styles.amountInput}
                 placeholder="500"
                 value={eventData.targetAmount}
-                onChangeText={(text) => setEventData({ ...eventData, targetAmount: text })}
+              onChangeText={(text) => setEventData({ ...eventData, targetAmount: text, hasGoal: true })}
                 keyboardType="decimal-pad"
               />
             </View>
@@ -569,8 +685,32 @@ export default function CreateEventFlowScreen({ route, navigation }) {
             />
           </View>
 
+        {/* NEW: Goal Toggle */}
+        <View style={styles.goalToggleContainer}>
+          <TouchableOpacity
+            style={styles.goalToggle}
+            onPress={() => setEventData({ 
+              ...eventData, 
+              hasGoal: !eventData.hasGoal,
+              targetAmount: eventData.hasGoal ? '' : eventData.targetAmount
+            })}
+          >
+            <View style={[styles.checkbox, eventData.hasGoal && styles.checkboxChecked]}>
+              {eventData.hasGoal && <Ionicons name="checkmark" size={16} color="#fff" />}
+            </View>
+            <Text style={styles.goalToggleLabel}>Set a target goal</Text>
+          </TouchableOpacity>
+          <Text style={styles.goalToggleHint}>
+            {eventData.hasGoal 
+              ? 'Guests will see progress toward your goal' 
+              : 'Accept any amount - no target required'}
+          </Text>
+        </View>
+
+        {/* Conditional Target Amount */}
+        {eventData.hasGoal && (
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Target Amount</Text>
+            <Text style={styles.label}>Target Amount (Optional)</Text>
             <View style={styles.amountInputContainer}>
               <Text style={styles.currencySymbol}>$</Text>
               <TextInput
@@ -582,10 +722,22 @@ export default function CreateEventFlowScreen({ route, navigation }) {
               />
             </View>
           </View>
-        </View>
-      )}
-    </ScrollView>
-  );
+        )}
+      </View>
+    )}
+
+    {/* No Registry Info */}
+    {eventData.registryType === 'none' && (
+      <View style={styles.infoBox}>
+        <Ionicons name="information-circle" size={24} color="#4ECDC4" />
+        <Text style={styles.infoText}>
+          No gift registry will be attached to this event. Guests can still RSVP and celebrate with you!
+        </Text>
+      </View>
+    )}
+  </ScrollView>
+);
+
 
   const renderStep4 = () => (
     <ScrollView style={styles.stepContainer} showsVerticalScrollIndicator={false}>
@@ -1071,5 +1223,38 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: '#fff',
+  },
+  goalToggleContainer: {
+    marginBottom: 20,
+  },
+  goalToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 12,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#4ECDC4',
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#4ECDC4',
+  },
+  goalToggleLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  goalToggleHint: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 36,
+    fontStyle: 'italic',
   },
 });

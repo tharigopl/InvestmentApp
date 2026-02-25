@@ -57,7 +57,7 @@ router.post('/:eventId/initiate-withdrawal', checkAuth, eventController.initiate
 
 router.post('/:eventId/mark-purchased', checkAuth, eventController.markStocksPurchased);
 
-
+router.put('/:eventId/status', checkAuth, eventController.updateEventStatus);
 
 
 module.exports = router;

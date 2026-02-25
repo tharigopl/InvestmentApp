@@ -117,8 +117,13 @@ const eventSchema = new Schema({
   // ========================================
   targetAmount: { 
     type: Number, 
-    required: true 
+    default: 0
   },
+
+  hasGoal: {
+    type: Boolean,
+    default: true,  // Most events have goals
+  }, 
   
   currentAmount: { 
     type: Number, 
@@ -391,9 +396,14 @@ eventSchema.index({ status: 1, privacyLevel: 1 });
 
 // Progress percentage
 eventSchema.virtual('progressPercentage').get(function() {
-  if (!this.targetAmount) return 0;
-  return Math.min((this.currentAmount / this.targetAmount) * 100, 100);
-});
+    if (!this.hasGoal || this.targetAmount === 0) {
+      // For goalless events, show contribution count or total raised
+      return null;  // We'll handle this differently in frontend
+    }
+    return this.targetAmount > 0 
+      ? Math.min((this.currentAmount / this.targetAmount) * 100, 100) 
+      : 0;
+  });
 
 // Days until event
 eventSchema.virtual('daysUntilEvent').get(function() {
@@ -407,6 +417,11 @@ eventSchema.virtual('daysUntilEvent').get(function() {
 // ========================================
 // INSTANCE METHODS
 // ========================================
+
+// Method to check if event has goal
+eventSchema.methods.hasTargetGoal = function() {
+    return this.hasGoal && this.targetAmount > 0;
+  };
 
 // Calculate RSVP statistics
 eventSchema.methods.calculateRSVPStats = function() {
