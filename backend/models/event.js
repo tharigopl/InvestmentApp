@@ -163,7 +163,54 @@ const eventSchema = new Schema({
       type: Boolean, 
       default: false 
     },
+    // Guest info (for non-registered contributors)
+    guestName: String,
+    guestEmail: String,
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'completed', 'failed', 'refunded'],
+      default: 'completed',
+    },
   }],
+
+  // ========================================
+  // ✅ NEW: Public Sharing Fields
+  // ========================================
+  
+  shareId: {
+    type: String,
+    unique: true,
+    sparse: true, // Allows null values to not conflict
+    index: true,
+  },
+  
+  isPublic: {
+    type: Boolean,
+    default: true, // Most events are shareable
+  },
+  
+  publicSettings: {
+    allowGuestRSVP: {
+      type: Boolean,
+      default: true,
+    },
+    allowGuestContributions: {
+      type: Boolean,
+      default: true,
+    },
+    showGuestList: {
+      type: Boolean,
+      default: false, // Privacy - hide guest names
+    },
+    showContributors: {
+      type: Boolean,
+      default: true, // Show who contributed
+    },
+    requireRSVPToContribute: {
+      type: Boolean,
+      default: false,
+    },
+  },
   
   // ========================================
   // REGISTRY TYPE & OPTIONS
@@ -391,6 +438,42 @@ eventSchema.index({ eventDate: 1 });
 eventSchema.index({ status: 1, privacyLevel: 1 });
 
 // ========================================
+// ✅ NEW: Pre-save hook to generate shareId
+// ========================================
+
+eventSchema.pre('save', async function(next) {
+    // Generate shareId if not exists
+    if (!this.shareId) {
+      this.shareId = await generateUniqueShareId();
+    }
+    next();
+  });
+
+  // Helper function to generate unique share ID
+    async function generateUniqueShareId() {
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        const length = 8;
+        
+        let shareId;
+        let isUnique = false;
+        
+        while (!isUnique) {
+        shareId = '';
+        for (let i = 0; i < length; i++) {
+            shareId += characters.charAt(Math.floor(Math.random() * characters.length));
+        }
+        
+        // Check if this shareId already exists
+        const existing = await mongoose.model('Event').findOne({ shareId });
+        if (!existing) {
+            isUnique = true;
+        }
+        }
+        
+        return shareId;
+    }
+
+// ========================================
 // VIRTUAL FIELDS
 // ========================================
 
@@ -417,6 +500,30 @@ eventSchema.virtual('daysUntilEvent').get(function() {
 // ========================================
 // INSTANCE METHODS
 // ========================================
+
+// ========================================
+// ✅ NEW: Method to get public URL
+// ========================================
+
+eventSchema.methods.getPublicUrl = function() {
+    const baseUrl = process.env.PUBLIC_URL || 'https://yourapp.com' || 'https://localhost:8081';
+    return `${baseUrl}/events/share/${this.shareId}`;
+  };
+  
+  // ========================================
+  // ✅ NEW: Method to get share data
+  // ========================================
+  
+  eventSchema.methods.getShareData = function() {
+    return {
+      title: this.eventTitle,
+      description: this.eventDescription || `Join us for ${this.eventTitle}!`,
+      imageUrl: this.design?.customImageUrl || this.design?.templateId,
+      eventDate: this.eventDate,
+      location: this.location,
+      url: this.getPublicUrl(),
+    };
+  };
 
 // Method to check if event has goal
 eventSchema.methods.hasTargetGoal = function() {

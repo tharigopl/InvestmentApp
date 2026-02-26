@@ -253,9 +253,15 @@ const ManageEventFunds = ({ route, navigation }) => {
           </View>
 
           {event.contributors.map((contributor, index) => {
-            const contributorName = contributor.user 
-              ? `${contributor.user.fname} ${contributor.user.lname}`.trim()
-              : 'Anonymous';
+            // const contributorName = contributor.user 
+            //   ? `${contributor.user.fname} ${contributor.user.lname}`.trim()
+            //   : 'Anonymous';
+
+            const contributorName = contributor.isAnonymous 
+            ? 'Anonymous'
+            : contributor.user 
+              ? `${contributor.user.fname || ''} ${contributor.user.lname || ''}`.trim()
+              : `${contributor.guestName || ''}`.trim() != '' ? `${contributor.guestName || ''}`.trim() : 'Anonymous';
             
             return (
               <View key={index} style={styles.contributorRow}>

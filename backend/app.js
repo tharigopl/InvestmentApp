@@ -17,6 +17,7 @@ const eventRoutes = require("./routes/event-routes");
 const contactsRoutes = require('./routes/contacts-routes');  
 const eventInviteRoutes = require('./routes/event-invite-routes');
 const designRoutes = require('./routes/design-routes');
+const publicEventRoutes = require('./routes/public-event-routes');
 
 // Import utilities
 const HttpError = require("./models/http-error");
@@ -139,6 +140,9 @@ app.use((req, res, next) => {
 // ============================================
 // API ROUTES
 // ============================================
+
+// ✅ Public routes (NO AUTH REQUIRED - must be before auth routes)
+app.use('/api/public', publicEventRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

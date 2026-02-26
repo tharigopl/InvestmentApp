@@ -40,12 +40,15 @@ import EventFeed from './screens/EventFeed';
 import EventDetails from './screens/EventDetails';
 import CreateInvestmentEvent from './screens/CreateInvestmentEvent';
 import ContributionScreen from './screens/ContributionScreen';
+import PublicEventView from './screens/PublicEventView';
 
 //Event Invite Screens
 import EventTypeSelectionScreen from './screens/evite/EventTypeSelectionScreen';
 import DesignSelectionScreen from './screens/evite/DesignSelectionScreen';
 import ManageInvitesScreen from './screens/evite/ManageInvitesScreen';
 import CreateEventFlowScreen from './screens/evite/CreateEventFlowScreen';
+import GuestContributionScreen from './screens/GuestContributionScreen';
+import ContributionSuccessScreen from './screens/ContributionSuccessScreen';
 
 // Contexts & Components
 import AuthContextProvider, { AuthContext } from './store/auth-context';
@@ -62,14 +65,57 @@ import config from './config';
 //Stripe
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
-const STRIPE_PUBLISHABLE_KEY = config.STRIPE_PUBLISHABLE_KEY;
-const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
 
 import ManageEventFunds from './screens/ManageEventFunds';
 import PurchaseStocks from './screens/PurchaseStocks';
 
 // Custom Drawer Content
 import CustomDrawerContent from './components/CustomDrawerContent';
+
+
+// ============================================
+// ✅ PUBLIC ROUTE HELPERS
+// ============================================
+function isPublicRoute() {
+  if (typeof window !== 'undefined' && window.location) {
+    const path = window.location.pathname;
+    const shareId = getShareIdFromUrl();
+    
+    // Only return true if:
+    // 1. Path starts with /events/share/
+    // 2. ShareId exists and is valid
+    const isValid = path.startsWith('/events/share/') && 
+                    shareId && 
+                    shareId.length >= 6 && 
+                    shareId !== 'null' && 
+                    shareId !== 'undefined';
+    
+    console.log('🔍 Public Route Check:', {
+      url: window.location.href,
+      path: path,
+      shareId: shareId,
+      isValid: isValid
+    });
+    
+    return isValid;
+  }
+  return false;
+}
+
+function getShareIdFromUrl() {
+  if (typeof window !== 'undefined' && window.location) {
+    const path = window.location.pathname;
+    
+    // Match /events/share/{shareId} where shareId is alphanumeric, min 6 chars
+    const match = path.match(/^\/events\/share\/([a-zA-Z0-9]{6,})$/);
+    return match ? match[1] : null;
+  }
+  return null;
+}
+
+
+const STRIPE_PUBLISHABLE_KEY = config.STRIPE_PUBLISHABLE_KEY;
+const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -89,19 +135,56 @@ const AppNavigationTheme = {
   },
 };
 
+// For React Navigation Web, add linking configuration
+
+const linking = {
+  prefixes: ['https://localhost:8081', 'https://yourapp.com', 'http://localhost:19006'],
+  config: {
+    screens: {
+      PublicEventView: 'events/share/:shareId',
+      // ... other screens
+    },
+  },
+};
+
 // ============================================
 // AUTH STACK (Login/Signup)
 // ============================================
 function AuthStack() {
+  const shareId = getShareIdFromUrl();
+  const initialRoute = (isPublicRoute() && shareId) ? 'PublicEventView' : 'Login';
+  
+  console.log('🎯 AuthStack initialRoute:', initialRoute, 'shareId:', shareId);
+  
   return (
     <Stack.Navigator
+      initialRouteName={initialRoute}
       screenOptions={{
         headerStyle: { backgroundColor: '#FF6B6B' },
         headerTintColor: 'white',
-        headerTitleStyle: { fontWeight: '800' },
-        contentStyle: { backgroundColor: '#FFF9F0' },
+        contentStyle: { backgroundColor: Colors.primary100 },
       }}
     >
+      {/* Public Event View */}
+      <Stack.Screen 
+        name="PublicEventView" 
+        component={PublicEventView}
+        options={{ title: 'Event Invitation', headerShown: true }}
+        initialParams={{ shareId: shareId }}  // Pass actual shareId, not function
+      />
+      {/* ✅ NEW: Guest Contribution Screens */}
+      <Stack.Screen 
+        name="GuestContribution" 
+        component={GuestContributionScreen}
+        options={{ title: 'Contribute', headerShown: true }}
+      />
+      <Stack.Screen 
+        name="ContributionSuccess" 
+        component={ContributionSuccessScreen}
+        options={{ title: 'Success', headerShown: false }}
+      />
+      
+      {/* Login/Signup */}
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Signup" component={SignupScreen} />
     </Stack.Navigator>
@@ -852,6 +935,7 @@ function DrawerNavig(){
   );
 }
 
+
 // ============================================
 //  UPDATED: AUTHENTICATED STACK (After Login)
 // ============================================
@@ -1136,8 +1220,20 @@ function AuthenticatedStack() {
 // ============================================
 function Navigation() {
   const authCtx = useContext(AuthContext);
+  const [initialRouteName, setInitialRouteName] = useState('Login');
+  // ✅ Determine initial route based on URL
+  useEffect(() => {
+    if (isPublicRoute()) {
+      console.log("IsPublicRoute");
+      setInitialRouteName('PublicEventView');
+    } else {
+      console.log("LoginRoute");
+      setInitialRouteName('Login');
+    }
+  }, []);
+
   return (
-    <NavigationContainer theme={AppNavigationTheme}>
+    <NavigationContainer theme={AppNavigationTheme} linking={linking}>
       {!authCtx.isAuthenticated && <AuthStack />}
       {authCtx.isAuthenticated && <AuthenticatedStack />}
     </NavigationContainer>

@@ -203,6 +203,8 @@ const createEvent = async (req, res) => {
       rsvpDeadline,
       status,
       hasGoal,
+      isPublic, // ✅ NEW: Allow setting public status
+      publicSettings, // ✅ NEW: Public settings
     } = req.body;
 
     // Validate only truly required fields
@@ -263,6 +265,15 @@ const createEvent = async (req, res) => {
       
       // Initialize empty guestList
       guestList: [],
+      // ✅ NEW: Public sharing fields
+      isPublic: isPublic !== undefined ? isPublic : true,
+      publicSettings: publicSettings || {
+        allowGuestRSVP: true,
+        allowGuestContributions: true,
+        showGuestList: false,
+        showContributors: true,
+        requireRSVPToContribute: false,
+      },
     });
 
     const savedEvent = await newEvent.save();
@@ -272,6 +283,7 @@ const createEvent = async (req, res) => {
     res.status(201).json({
       message: 'Event created successfully',
       event: savedEvent,
+      shareUrl: savedEvent.getPublicUrl(),
     });
 
   } catch (error) {

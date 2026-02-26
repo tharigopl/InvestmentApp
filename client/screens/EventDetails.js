@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 // /import MapView, { Marker } from 'react-native-maps';
  import LocationMap from '../components/LocationMap';
+ import { showAlert } from '../util/platform-alert';
 
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -63,14 +64,14 @@ const EventDetails = ({ route, navigation }) => {
 
   const handleContribute = () => {
     if (event.status !== 'active') {
-      Alert.alert('Event Closed', 'This event is no longer accepting contributions.');
+      showAlert('Event Closed', 'This event is no longer accepting contributions.');
       return;
     }
     navigation.navigate('ContributionScreen', { eventId: event._id || event.id });
   };
 
   const handleCancelEvent = () => {
-    Alert.alert(
+    showAlert(
       'Cancel Event',
       'Are you sure you want to cancel this event? All contributions will be refunded.',
       [
@@ -81,11 +82,11 @@ const EventDetails = ({ route, navigation }) => {
           onPress: async () => {
             try {
               await cancelEvent(eventId, 'Cancelled by host');
-              Alert.alert('Success', 'Event has been cancelled successfully.', [
+              showAlert('Success', 'Event has been cancelled successfully.', [
                 { text: 'OK', onPress: () => navigation.goBack() },
               ]);
             } catch (error) {
-              Alert.alert('Error', 'Failed to cancel event. Please try again.');
+              showAlert('Error', 'Failed to cancel event. Please try again.');
             }
           },
         },
@@ -96,9 +97,18 @@ const EventDetails = ({ route, navigation }) => {
   const handleShare = async () => {
     try {
       // Create share URL (adjust domain as needed)
-      const eventUrl = Platform.OS === 'web' 
-        ? `${window.location.origin}/event/${eventId}`
-        : `https://localhost:8081/event/${eventId}`;
+      const shareUrl = event.shareId 
+        ? (Platform.OS === 'web'
+            ? `${window.location.origin}/events/share/${event.shareId}`
+            : `https://localhost:8081/events/share/${event.shareId}`)
+        : null;
+
+      if (!shareUrl) {
+        showAlert('Share Not Available', 'This event does not have a share link yet');
+        return;
+      }
+
+      const eventUrl = shareUrl;
       
       const shareMessage = `🎉 You're invited to ${event.eventTitle || event.title}!
   
@@ -129,7 +139,7 @@ const EventDetails = ({ route, navigation }) => {
         } else {
           // Fallback: Copy to clipboard
           await navigator.clipboard.writeText(shareMessage);
-          Alert.alert('Copied!', 'Event details copied to clipboard');
+          showAlert('Copied!', 'Event details copied to clipboard');
         }
       } else {
         // Mobile: Use React Native Share
@@ -151,7 +161,7 @@ const EventDetails = ({ route, navigation }) => {
       }
     } catch (error) {
       console.error('Error sharing:', error);
-      Alert.alert('Error', 'Failed to share event. Please try again.');
+      showAlert('Error', 'Failed to share event. Please try again.');
     }
   };
 
@@ -414,7 +424,7 @@ const EventDetails = ({ route, navigation }) => {
             </View>
             
             {/* Manage Invites Button (if host) */}
-            {isHost && (
+            {isCreator && (
               <TouchableOpacity
                 style={styles.manageInvitesButton}
                 onPress={() => navigation.navigate('ManageInvites', { eventId: event._id })}
@@ -560,7 +570,7 @@ const EventDetails = ({ route, navigation }) => {
                 ? 'Anonymous'
                 : contribution.user 
                   ? `${contribution.user.fname || ''} ${contribution.user.lname || ''}`.trim()
-                  : 'Anonymous';
+                  : `${contribution.guestName || ''}`.trim() != '' ? `${contribution.guestName || ''}`.trim() : 'Anonymous';
               
               const contributorInitial = contribution.isAnonymous || !contribution.user
                 ? '?'
