@@ -16,10 +16,13 @@ router.get('/:eventId/guests', inviteController.getGuestList);
 router.patch('/:eventId/rsvp', inviteController.updateRSVP);
 
 // Remove guest
-router.delete('/:eventId/guests/:guestIdentifier', inviteController.removeGuest);
+router.delete('/:eventId/guests/:guestId', checkAuth, inviteController.removeGuest);
 
 // Resend invitation
-router.post('/:eventId/guests/resend', inviteController.resendInvitation);
+router.post('/:eventId/resend-invite', checkAuth, inviteController.resendInvite);
+
+// Send all invitations
+router.post('/:eventId/send-all-invites', checkAuth, inviteController.sendAllInvites);
 
 // Send reminder
 router.post('/:eventId/remind', inviteController.sendReminder);

@@ -60,4 +60,6 @@ router.post('/:eventId/mark-purchased', checkAuth, eventController.markStocksPur
 router.put('/:eventId/status', checkAuth, eventController.updateEventStatus);
 
 
+
+
 module.exports = router;

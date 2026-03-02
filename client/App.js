@@ -1204,7 +1204,7 @@ function AuthenticatedStack() {
       <Stack.Screen 
         name="ManageInvites" 
         component={ManageInvitesScreen}
-        options={{ headerShown: false }}
+        options={{ headerShown: true }}
       />
       <Stack.Screen 
         name="CreateEventFlow" 

@@ -641,13 +641,13 @@ const EventDetails = ({ route, navigation }) => {
           {/* Secondary Actions */}
           <View style={styles.secondaryActions}>
             <TouchableOpacity
-              style={styles.shareButton} 
+              style={styles.secondaryButton} 
               onPress={handleShare}
             >
-              <View style={styles.shareButtonContent}>
+              {/*<View style={styles.shareButtonContent}>*/}
                 <Ionicons name="share-social" size={20} color="#4ECDC4" />
-                <Text style={styles.shareButtonText}>Share Event</Text>
-              </View>
+                <Text style={[styles.secondaryButtonText, styles.shareText]}>Share Event</Text>
+              {/*</View>*/}
             </TouchableOpacity>
             
             {isCreator && event.status === 'active' && (
@@ -1004,6 +1004,8 @@ const styles = StyleSheet.create({
   secondaryActions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
   },
   secondaryButton: {
     flexDirection: 'row',
@@ -1019,6 +1021,9 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     color: '#FF6B6B',
+  },
+  shareText: {
+    color: '#4ECDC4',
   },
   designImage: {
     width: '100%',

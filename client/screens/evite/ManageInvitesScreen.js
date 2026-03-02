@@ -1,3 +1,4 @@
+// client/screens/evite/ManageInvitesScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -6,174 +7,283 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Platform,
-  Alert,
   ActivityIndicator,
+  Modal,
   FlatList,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import apiClient from '../../util/api-client';
+import { showAlert } from '../../util/platform-alert';
 
-export default function ManageInvitesScreen({ route, navigation }) {
+const ManageInvitesScreen = ({ route, navigation }) => {
   const { eventId } = route.params;
-
+  
   const [event, setEvent] = useState(null);
   const [guests, setGuests] = useState([]);
-  const [stats, setStats] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('all'); // 'all', 'going', 'pending'
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all'); // all, going, maybe, pending, not_going
+  
+  // Add Guest Modal
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newGuest, setNewGuest] = useState({
+    name: '',
+    email: '',
+    phone: '',
+  });
+  const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
-    loadGuestList();
-  }, []);
+    loadEventAndGuests();
+  }, [eventId]);
 
-  const loadGuestList = async () => {
+  const loadEventAndGuests = async () => {
     try {
       setIsLoading(true);
-      const response = await apiClient.get(`/events/${eventId}/guests`);
-      
-      // Combine registered users and external guests
-      const allGuests = [
-        ...(response.data.registeredUsers || []).map(p => ({
-          ...p,
-          type: 'registered',
-          name: p.user ? `${p.user.fname} ${p.user.lname}` : 'Unknown',
-          email: p.user?.email,
-        })),
-        ...(response.data.externalGuests || []).map(g => ({
-          ...g,
-          type: 'external',
-        })),
-      ];
-      
-      setGuests(allGuests);
-      setStats(response.data.stats);
-      
-      // Also load event details
-      const eventResponse = await apiClient.get(`/events/${eventId}`);
-      setEvent(eventResponse.data.event || eventResponse.data);
-      
+      const response = await apiClient.get(`/events/${eventId}`);
+      setEvent(response.data);
+      console.log(response.data.event.guestList);
+      setGuests(response.data.event.guestList || []);
     } catch (error) {
-      console.error('Error loading guests:', error);
-      Alert.alert('Error', 'Failed to load guest list');
+      console.error('Error loading event:', error);
+      showAlert('Error', 'Failed to load event details');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSendReminder = async () => {
+  const handleAddGuest = async () => {
+    // Validation
+    if (!newGuest.name.trim()) {
+      showAlert('Required Field', 'Please enter guest name');
+      return;
+    }
+
+    if (!newGuest.email.trim() && !newGuest.phone.trim()) {
+      showAlert('Required Field', 'Please enter email or phone number');
+      return;
+    }
+
+    // Email validation if provided
+    if (newGuest.email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newGuest.email)) {
+        showAlert('Invalid Email', 'Please enter a valid email address');
+        return;
+      }
+    }
+
     try {
-      Alert.alert(
-        'Send Reminder',
-        'Send RSVP reminder to all pending guests?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Send',
-            onPress: async () => {
-              await apiClient.post(`/events/${eventId}/remind`);
-              Alert.alert('Success', 'Reminders sent!');
-            },
-          },
-        ]
-      );
+      setIsAdding(true);
+
+      await apiClient.post(`/events/${eventId}/invite`, {
+        guests: [{
+          name: newGuest.name,
+          email: newGuest.email || null,
+          phone: newGuest.phone || null,
+        }],
+      });
+
+      showAlert('✅ Guest Added', `${newGuest.name} has been added to the guest list`);
+      
+      // Reset form and close modal
+      setNewGuest({ name: '', email: '', phone: '' });
+      setShowAddModal(false);
+      
+      // Reload guests
+      loadEventAndGuests();
+
     } catch (error) {
-      Alert.alert('Error', 'Failed to send reminders');
+      console.error('Error adding guest:', error);
+      showAlert('Error', error.response?.data?.message || 'Failed to add guest');
+    } finally {
+      setIsAdding(false);
     }
   };
 
-  const handleRemoveGuest = async (guestId, guestEmail) => {
-    try {
-      Alert.alert(
-        'Remove Guest',
-        'Are you sure you want to remove this guest?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Remove',
-            style: 'destructive',
-            onPress: async () => {
-              const identifier = guestId || guestEmail;
-              await apiClient.delete(`/events/${eventId}/guests/${identifier}`);
-              loadGuestList();
-              Alert.alert('Success', 'Guest removed');
-            },
+  const handleRemoveGuest = (guest) => {
+    showAlert(
+      'Remove Guest',
+      `Remove ${guest.name} from the guest list?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiClient.delete(`/events/${eventId}/guests/${guest._id}`);
+              showAlert('Removed', `${guest.name} has been removed`);
+              loadEventAndGuests();
+            } catch (error) {
+              console.error('Error removing guest:', error);
+              showAlert('Error', 'Failed to remove guest');
+            }
           },
-        ]
-      );
+        },
+      ]
+    );
+  };
+
+  const handleResendInvite = async (guest) => {
+    try {
+      await apiClient.post(`/events/${eventId}/resend-invite`, {
+        guestId: guest._id,
+      });
+      showAlert('✅ Invitation Sent', `Invitation resent to ${guest.name}`);
     } catch (error) {
-      Alert.alert('Error', 'Failed to remove guest');
+      console.error('Error resending invite:', error);
+      showAlert('Error', 'Failed to resend invitation');
     }
   };
 
-  const filteredGuests = guests.filter(guest => {
-    // Filter by tab
-    if (activeTab === 'going' && guest.rsvpStatus !== 'going') return false;
-    if (activeTab === 'pending' && guest.rsvpStatus !== 'pending') return false;
+  const handleSendAllInvites = async () => {
+    const pendingGuests = guests.filter(g => g.rsvpStatus === 'pending');
     
-    // Filter by search
-    if (searchQuery) {
+    if (pendingGuests.length === 0) {
+      showAlert('No Pending Invites', 'All guests have already been invited');
+      return;
+    }
+
+    showAlert(
+      'Send Invitations',
+      `Send invitations to ${pendingGuests.length} pending guest${pendingGuests.length !== 1 ? 's' : ''}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send',
+          onPress: async () => {
+            try {
+              await apiClient.post(`/events/${eventId}/send-all-invites`);
+              showAlert('✅ Invitations Sent', `Invitations sent to ${pendingGuests.length} guests`);
+              loadEventAndGuests();
+            } catch (error) {
+              console.error('Error sending invites:', error);
+              showAlert('Error', 'Failed to send invitations');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const getFilteredGuests = () => {
+    let filtered = guests;
+
+    // Filter by status
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(g => g.rsvpStatus === filterStatus);
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      return (
-        guest.name?.toLowerCase().includes(query) ||
-        guest.email?.toLowerCase().includes(query)
+      filtered = filtered.filter(g => 
+        g.name?.toLowerCase().includes(query) ||
+        g.email?.toLowerCase().includes(query) ||
+        g.phone?.includes(query)
       );
     }
-    
-    return true;
-  });
+
+    return filtered;
+  };
+
+  const getRSVPStats = () => {
+    return {
+      total: guests.length,
+      going: guests.filter(g => g.rsvpStatus === 'going').length,
+      maybe: guests.filter(g => g.rsvpStatus === 'maybe').length,
+      notGoing: guests.filter(g => g.rsvpStatus === 'not_going').length,
+      pending: guests.filter(g => g.rsvpStatus === 'pending').length,
+    };
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'going': return '#4ECDC4';
+      case 'maybe': return '#FFD93D';
+      case 'not_going': return '#FF6B6B';
+      case 'pending': return '#999';
+      default: return '#999';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'going': return 'checkmark-circle';
+      case 'maybe': return 'help-circle';
+      case 'not_going': return 'close-circle';
+      case 'pending': return 'time';
+      default: return 'person';
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'going': return 'Going';
+      case 'maybe': return 'Maybe';
+      case 'not_going': return 'Not Going';
+      case 'pending': return 'Pending';
+      default: return 'Unknown';
+    }
+  };
 
   const renderGuestItem = ({ item: guest }) => (
     <View style={styles.guestCard}>
-      <View style={styles.guestAvatar}>
-        <Text style={styles.guestInitial}>
-          {guest.name?.charAt(0).toUpperCase() || '?'}
-        </Text>
+      <View style={styles.guestHeader}>
+        <View style={styles.guestInfo}>
+          <Text style={styles.guestName}>{guest.name}</Text>
+          {guest.email && (
+            <View style={styles.contactRow}>
+              <Ionicons name="mail-outline" size={14} color="#666" />
+              <Text style={styles.contactText}>{guest.email}</Text>
+            </View>
+          )}
+          {guest.phone && (
+            <View style={styles.contactRow}>
+              <Ionicons name="call-outline" size={14} color="#666" />
+              <Text style={styles.contactText}>{guest.phone}</Text>
+            </View>
+          )}
+          {guest.plusOnes > 0 && (
+            <View style={styles.contactRow}>
+              <Ionicons name="people-outline" size={14} color="#666" />
+              <Text style={styles.contactText}>+{guest.plusOnes} guest{guest.plusOnes !== 1 ? 's' : ''}</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(guest.rsvpStatus)}20` }]}>
+          <Ionicons 
+            name={getStatusIcon(guest.rsvpStatus)} 
+            size={16} 
+            color={getStatusColor(guest.rsvpStatus)} 
+          />
+          <Text style={[styles.statusText, { color: getStatusColor(guest.rsvpStatus) }]}>
+            {getStatusLabel(guest.rsvpStatus)}
+          </Text>
+        </View>
       </View>
-      
-      <View style={styles.guestInfo}>
-        <Text style={styles.guestName}>{guest.name || 'Unknown'}</Text>
-        <Text style={styles.guestEmail}>{guest.email}</Text>
-        {guest.type === 'external' && (
-          <View style={styles.externalBadge}>
-            <Text style={styles.externalText}>External Guest</Text>
-          </View>
-        )}
-      </View>
-      
-      <View style={styles.guestStatus}>
-        {guest.rsvpStatus === 'going' && (
-          <View style={[styles.statusBadge, styles.statusGoing]}>
-            <Ionicons name="checkmark-circle" size={16} color="#4ECDC4" />
-            <Text style={[styles.statusText, { color: '#4ECDC4' }]}>Going</Text>
-          </View>
-        )}
-        {guest.rsvpStatus === 'maybe' && (
-          <View style={[styles.statusBadge, styles.statusMaybe]}>
-            <Ionicons name="help-circle" size={16} color="#FFD93D" />
-            <Text style={[styles.statusText, { color: '#FFB84D' }]}>Maybe</Text>
-          </View>
-        )}
+
+      {/* Actions */}
+      <View style={styles.guestActions}>
         {guest.rsvpStatus === 'pending' && (
-          <View style={[styles.statusBadge, styles.statusPending]}>
-            <Ionicons name="time" size={16} color="#999" />
-            <Text style={[styles.statusText, { color: '#999' }]}>Pending</Text>
-          </View>
-        )}
-        {guest.rsvpStatus === 'not_going' && (
-          <View style={[styles.statusBadge, styles.statusNotGoing]}>
-            <Ionicons name="close-circle" size={16} color="#FF6B6B" />
-            <Text style={[styles.statusText, { color: '#FF6B6B' }]}>Can't Make It</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => handleResendInvite(guest)}
+          >
+            <Ionicons name="paper-plane-outline" size={18} color="#4ECDC4" />
+            <Text style={styles.actionButtonText}>Resend</Text>
+          </TouchableOpacity>
         )}
         
         <TouchableOpacity
-          onPress={() => handleRemoveGuest(guest._id, guest.email)}
-          style={styles.removeButton}
+          style={styles.actionButton}
+          onPress={() => handleRemoveGuest(guest)}
         >
-          <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
+          <Ionicons name="trash-outline" size={18} color="#FF6B6B" />
+          <Text style={[styles.actionButtonText, { color: '#FF6B6B' }]}>Remove</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -182,408 +292,494 @@ export default function ManageInvitesScreen({ route, navigation }) {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4ECDC4" />
+        <ActivityIndicator size="large" color="#FF6B6B" />
+        <Text style={styles.loadingText}>Loading guest list...</Text>
       </View>
     );
   }
 
+  const stats = getRSVPStats();
+  const filteredGuests = getFilteredGuests();
+
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Header with Stats */}
       <LinearGradient
-        colors={['#4ECDC4', '#44A08D']}
+        colors={['#FF6B6B', '#FF8E53']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.header}
       >
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Manage Guests</Text>
-          <Text style={styles.headerSubtitle}>{event?.eventTitle}</Text>
-        </View>
-      </LinearGradient>
+        <Text style={styles.headerTitle}>Guest List</Text>
+        <Text style={styles.headerSubtitle}>{event?.eventTitle}</Text>
 
-      {/* Stats Cards */}
-      {stats && (
+        {/* RSVP Stats */}
         <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
+          <View style={styles.statBox}>
             <Text style={styles.statNumber}>{stats.total}</Text>
-            <Text style={styles.statLabel}>Total Invited</Text>
+            <Text style={styles.statLabel}>Total</Text>
           </View>
-          
-          <View style={styles.statCard}>
+          <View style={styles.statBox}>
             <Text style={[styles.statNumber, { color: '#4ECDC4' }]}>{stats.going}</Text>
             <Text style={styles.statLabel}>Going</Text>
           </View>
-          
-          <View style={styles.statCard}>
+          <View style={styles.statBox}>
+            <Text style={[styles.statNumber, { color: '#FFD93D' }]}>{stats.maybe}</Text>
+            <Text style={styles.statLabel}>Maybe</Text>
+          </View>
+          <View style={styles.statBox}>
             <Text style={[styles.statNumber, { color: '#999' }]}>{stats.pending}</Text>
             <Text style={styles.statLabel}>Pending</Text>
           </View>
-          
-          <View style={styles.statCard}>
-            <Text style={[styles.statNumber, { color: '#FFD93D' }]}>{stats.responseRate}%</Text>
-            <Text style={styles.statLabel}>Response Rate</Text>
-          </View>
         </View>
-      )}
+      </LinearGradient>
 
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'all' && styles.tabActive]}
-          onPress={() => setActiveTab('all')}
-        >
-          <Text style={[styles.tabText, activeTab === 'all' && styles.tabTextActive]}>
-            All ({guests.length})
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'going' && styles.tabActive]}
-          onPress={() => setActiveTab('going')}
-        >
-          <Text style={[styles.tabText, activeTab === 'going' && styles.tabTextActive]}>
-            Going ({guests.filter(g => g.rsvpStatus === 'going').length})
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'pending' && styles.tabActive]}
-          onPress={() => setActiveTab('pending')}
-        >
-          <Text style={[styles.tabText, activeTab === 'pending' && styles.tabTextActive]}>
-            Pending ({guests.filter(g => g.rsvpStatus === 'pending').length})
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {/* Search and Filters */}
+      <View style={styles.controlsContainer}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#999" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search guests..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
 
-      {/* Search */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#999" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search guests..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterContainer}
+        >
+          {['all', 'going', 'maybe', 'pending', 'not_going'].map((status) => (
+            <TouchableOpacity
+              key={status}
+              style={[
+                styles.filterButton,
+                filterStatus === status && styles.filterButtonActive
+              ]}
+              onPress={() => setFilterStatus(status)}
+            >
+              <Text style={[
+                styles.filterText,
+                filterStatus === status && styles.filterTextActive
+              ]}>
+                {status === 'all' ? 'All' : getStatusLabel(status)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       {/* Guest List */}
       <FlatList
         data={filteredGuests}
         renderItem={renderGuestItem}
-        keyExtractor={(item, index) => item._id || item.email || index.toString()}
+        keyExtractor={(item, index) => item._id || index.toString()}
         contentContainerStyle={styles.listContainer}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="people-outline" size={64} color="#CCC" />
-            <Text style={styles.emptyText}>No guests found</Text>
+            <Text style={styles.emptyTitle}>No Guests Yet</Text>
+            <Text style={styles.emptyText}>
+              {searchQuery || filterStatus !== 'all' 
+                ? 'No guests match your search' 
+                : 'Start adding guests to your event'}
+            </Text>
           </View>
         }
       />
 
-      {/* Bottom Actions */}
-      <View style={styles.bottomBar}>
+      {/* Action Buttons */}
+      <View style={styles.actionBar}>
         <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('AddGuests', { eventId })}
-        >
-          <Ionicons name="person-add" size={20} color="#4ECDC4" />
-          <Text style={styles.actionButtonText}>Add Guests</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.actionButton, styles.actionButtonPrimary]}
-          onPress={handleSendReminder}
+          style={styles.addButton}
+          onPress={() => setShowAddModal(true)}
         >
           <LinearGradient
-            colors={['#FF6B6B', '#FF8E53']}
+            colors={['#4ECDC4', '#44A08D']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            style={styles.actionButtonGradient}
+            style={styles.addButtonGradient}
           >
-            <Ionicons name="notifications" size={20} color="#fff" />
-            <Text style={styles.actionButtonTextWhite}>Send Reminder</Text>
+            <Ionicons name="person-add" size={24} color="#fff" />
+            <Text style={styles.addButtonText}>Add Guest</Text>
           </LinearGradient>
         </TouchableOpacity>
+
+        {stats.pending > 0 && (
+          <TouchableOpacity
+            style={styles.sendAllButton}
+            onPress={handleSendAllInvites}
+          >
+            <Ionicons name="paper-plane" size={20} color="#FF6B6B" />
+            <Text style={styles.sendAllText}>Send All Invites</Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      {/* Add Guest Modal */}
+      <Modal
+        visible={showAddModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Guest</Text>
+              <TouchableOpacity onPress={() => setShowAddModal(false)}>
+                <Ionicons name="close" size={28} color="#333" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Name *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="John Doe"
+                  value={newGuest.name}
+                  onChangeText={(text) => setNewGuest({ ...newGuest, name: text })}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Email</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="john@example.com"
+                  value={newGuest.email}
+                  onChangeText={(text) => setNewGuest({ ...newGuest, email: text })}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Phone</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="+1 (555) 123-4567"
+                  value={newGuest.phone}
+                  onChangeText={(text) => setNewGuest({ ...newGuest, phone: text })}
+                  keyboardType="phone-pad"
+                />
+              </View>
+
+              <Text style={styles.inputHint}>
+                * At least one contact method (email or phone) is required
+              </Text>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={handleAddGuest}
+              disabled={isAdding}
+            >
+              <LinearGradient
+                colors={['#4ECDC4', '#44A08D']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.submitGradient}
+              >
+                {isAdding ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="person-add" size={24} color="#fff" />
+                    <Text style={styles.submitText}>Add Guest</Text>
+                  </>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF9F0',
+    backgroundColor: '#F5F5F5',
   },
-
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFF9F0',
+    backgroundColor: '#F5F5F5',
   },
-
-  // Header
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+  },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
-    paddingBottom: 20,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerContent: {
-    flex: 1,
-    marginLeft: 16,
+    padding: 24,
+    paddingTop: 32,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '800',
     color: '#fff',
+    marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: 'rgba(255,255,255,0.9)',
-    marginTop: 2,
+    marginBottom: 24,
   },
-
-  // Stats
   statsContainer: {
     flexDirection: 'row',
-    padding: 16,
-    gap: 12,
+    justifyContent: 'space-around',
   },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
+  statBox: {
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
   },
   statNumber: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#333',
+    color: '#fff',
     marginBottom: 4,
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
     fontWeight: '600',
-    color: '#999',
-    textAlign: 'center',
   },
-
-  // Tabs
-  tabsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 8,
-    marginBottom: 16,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
+  controlsContainer: {
+    padding: 16,
     backgroundColor: '#fff',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
   },
-  tabActive: {
-    backgroundColor: '#4ECDC4',
-    borderColor: '#4ECDC4',
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#666',
-  },
-  tabTextActive: {
-    color: '#fff',
-  },
-
-  // Search
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F5F5',
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-    gap: 12,
+    paddingHorizontal: 12,
+    marginBottom: 12,
   },
   searchInput: {
     flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     fontSize: 16,
     color: '#333',
   },
-
-  // List
+  filterContainer: {
+    flexDirection: 'row',
+  },
+  filterButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F5F5F5',
+    marginRight: 8,
+  },
+  filterButtonActive: {
+    backgroundColor: '#FF6B6B',
+  },
+  filterText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  filterTextActive: {
+    color: '#fff',
+  },
   listContainer: {
     padding: 16,
-    paddingBottom: 100,
   },
-
-  // Guest Card
   guestCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
   },
-  guestAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#4ECDC4',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  guestInitial: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#fff',
+  guestHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
   guestInfo: {
     flex: 1,
   },
   guestName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: '#333',
+    marginBottom: 8,
+  },
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginBottom: 4,
   },
-  guestEmail: {
+  contactText: {
     fontSize: 14,
     color: '#666',
-  },
-  externalBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#FFD93D',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginTop: 4,
-  },
-  externalText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  guestStatus: {
-    alignItems: 'flex-end',
-    gap: 8,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
+    gap: 6,
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 12,
-    gap: 4,
-  },
-  statusGoing: {
-    backgroundColor: '#F0FFFE',
-  },
-  statusMaybe: {
-    backgroundColor: '#FFF9E6',
-  },
-  statusPending: {
-    backgroundColor: '#F5F5F5',
-  },
-  statusNotGoing: {
-    backgroundColor: '#FFE6E6',
+    borderRadius: 20,
   },
   statusText: {
     fontSize: 12,
     fontWeight: '700',
   },
-  removeButton: {
-    padding: 4,
-  },
-
-  // Empty State
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#999',
-    marginTop: 16,
-  },
-
-  // Bottom Bar
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+  guestActions: {
     flexDirection: 'row',
-    padding: 16,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
     gap: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F5F5F5',
   },
   actionButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#4ECDC4',
-    gap: 8,
+    gap: 6,
   },
   actionButtonText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#4ECDC4',
   },
-  actionButtonPrimary: {
-    borderWidth: 0,
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 64,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+  },
+  actionBar: {
+    padding: 16,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5E5',
+    gap: 12,
+  },
+  addButton: {
+    borderRadius: 25,
     overflow: 'hidden',
   },
-  actionButtonGradient: {
+  addButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    gap: 8,
+    paddingVertical: 16,
+    gap: 12,
   },
-  actionButtonTextWhite: {
-    fontSize: 14,
+  addButtonText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  sendAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: '#FF6B6B',
+    backgroundColor: '#fff',
+  },
+  sendAllText: {
+    fontSize: 16,
     fontWeight: '700',
+    color: '#FF6B6B',
+  },
+  
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
+  },
+  modalContent: {
+    padding: 20,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    color: '#333',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+  },
+  inputHint: {
+    fontSize: 12,
+    color: '#999',
+    fontStyle: 'italic',
+  },
+  submitButton: {
+    margin: 20,
+    borderRadius: 25,
+    overflow: 'hidden',
+  },
+  submitGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 12,
+  },
+  submitText: {
+    fontSize: 18,
+    fontWeight: '800',
     color: '#fff',
   },
 });
+
+export default ManageInvitesScreen;

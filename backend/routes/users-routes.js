@@ -78,7 +78,7 @@ router.get('/:userId/friends', checkAuth, usersControllers.getFriends);
  * @desc    Get combined list of friends (users + contacts)
  * @access  Private
  */
-router.get('/:userId/all-friends', checkAuth, usersControllers.getAllFriends);
+router.get('/all-friends', checkAuth, usersControllers.getAllFriends);
 
 /**
  * @route   GET /api/users/:userId/friend-suggestions

@@ -24,6 +24,8 @@ import {
   validateContributionAmount,
 } from '../util/contributions';
 
+import {showAlert} from '../util/platform-alert';
+
 const ContributionScreen = ({ route, navigation }) => {
   const { eventId } = route.params;
 
@@ -50,7 +52,7 @@ const ContributionScreen = ({ route, navigation }) => {
     } catch (err) {
       console.error('Error loading event:', err);
       setError('Failed to load event details');
-      Alert.alert('Error', 'Failed to load event details', [
+      showAlert('Error', 'Failed to load event details', [
         { text: 'Go Back', onPress: () => navigation.goBack() },
       ]);
     } finally {
@@ -75,17 +77,17 @@ const ContributionScreen = ({ route, navigation }) => {
     const validation = validateContributionAmount(parseFloat(amount));
     console.log("Contribution screen handle submit ", validation);
     if (!validation.valid) {
-      Alert.alert('Invalid Amount', validation.error);
+      showAlert('Invalid Amount', validation.error);
       return;
     }
 
     if (!cardComplete) {
-      Alert.alert('Card Required', 'Please enter your card details');
+      showAlert('Card Required', 'Please enter your card details');
       return;
     }
 
     if (cardError) {
-      Alert.alert('Card Error', cardError.message || 'Invalid card details');
+      showAlert('Card Error', cardError.message || 'Invalid card details');
       return;
     }
 
@@ -95,7 +97,7 @@ const ContributionScreen = ({ route, navigation }) => {
     console.log("Contribution screen handle submit 1 ", contributionAmount, remaining);
 
     // if (contributionAmount > remaining) {
-    //   Alert.alert(
+    //   showAlert(
     //     'Amount Too High',
     //     `This event only needs $${remaining.toFixed(2)} more to reach its goal.`,
     //     [
@@ -162,14 +164,14 @@ const ContributionScreen = ({ route, navigation }) => {
       };
       setEvent(updatedEvent);
 
-      Alert.alert(
+      showAlert(
         '🎉 Success!',
         `Your $${contributionAmount.toFixed(2)} contribution has been processed!\n\nEvent: $${updatedEvent.currentAmount.toFixed(2)} / $${updatedEvent.targetAmount.toFixed(2)}`,
         [{ text: 'View Event', onPress: () => navigation.goBack() }]
       );
     } catch (err) {
       console.error('❌ Payment error:', err);
-      Alert.alert('Payment Failed', err.message || 'Failed to process payment');
+      showAlert('Payment Failed', err.message || 'Failed to process payment');
     } finally {
       setIsProcessing(false);
     }

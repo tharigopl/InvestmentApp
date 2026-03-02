@@ -525,32 +525,89 @@ const getFriends = async (req, res, next) => {
     */
     
     // METHOD 2: If friends are stored in User model as an array
+    // const user = await User.findById(userId)
+    //   .populate('friends', 'fname lname email profileImage');
+    
+    // if (!user) {
+    //   return res.status(404).json({
+    //     message: 'User not found'
+    //   });
+    // }
+    
+    // const friendsList = (user.friends || []).map(friend => ({
+    //   _id: friend._id,
+    //   id: friend._id,
+    //   name: `${friend.fname} ${friend.lname}`,
+    //   firstName: friend.fname,
+    //   lastName: friend.lname,
+    //   email: friend.email,
+    //   profileImage: friend.profileImage,
+    //   type: 'user',
+    //   isRegistered: true
+    // }));
+    
+    // console.log(`[getFriends] Found ${friendsList.length} friends for user ${userId}`);
+    
+    // res.status(200).json({
+    //   friends: friendsList,
+    //   count: friendsList.length
+    // });
+
     const user = await User.findById(userId)
-      .populate('friends', 'fname lname email profileImage');
+      .populate('friends', 'fname lname email profileImage accountStatus')
+      .populate('externalContacts');
     
     if (!user) {
-      return res.status(404).json({
-        message: 'User not found'
-      });
+      return next(new HttpError('User not found', 404));
     }
     
-    const friendsList = (user.friends || []).map(friend => ({
-      _id: friend._id,
-      id: friend._id,
-      name: `${friend.fname} ${friend.lname}`,
-      firstName: friend.fname,
-      lastName: friend.lname,
-      email: friend.email,
-      profileImage: friend.profileImage,
-      type: 'user',
-      isRegistered: true
-    }));
+    // Registered users (friends)
+    const userFriends = user.friends
+      .filter(f => f.accountStatus === 'active' && !f.isDeleted)
+      .map(f => ({
+        id: f._id,
+        name: `${f.fname} ${f.lname}`,
+        firstName: f.fname,
+        lastName: f.lname,
+        email: f.email,
+        profileImage: f.profileImage,
+        type: 'user',
+        canContribute: true,
+        canReceiveGifts: true,
+        isRegistered: true
+      }));
     
-    console.log(`[getFriends] Found ${friendsList.length} friends for user ${userId}`);
+    // External contacts (not yet users)
+    const contactFriends = user.externalContacts
+      .filter(c => !c.linkedUserId) // Only unlinked contacts
+      .map(c => ({
+        id: c._id,
+        name: c.displayName,
+        firstName: c.firstName,
+        lastName: c.lastName,
+        email: c.email,
+        phoneNumber: c.phoneNumber,
+        profileImage: null,
+        type: 'contact',
+        canContribute: true, // Can contribute as guest
+        canReceiveGifts: true,
+        isRegistered: false,
+        invitedToJoin: c.invitedToJoin,
+        tags: c.tags
+      }));
     
-    res.status(200).json({
-      friends: friendsList,
-      count: friendsList.length
+    // Combine and sort by name
+    const allFriends = [...userFriends, ...contactFriends].sort((a, b) => 
+      a.name.localeCompare(b.name)
+    );
+    
+    res.json({ 
+      friends: allFriends,
+      summary: {
+        total: allFriends.length,
+        registered: userFriends.length,
+        contacts: contactFriends.length
+      }
     });
   } catch (error) {
     console.error('[getFriends] Error:', error);

@@ -6,6 +6,7 @@ const User = require('../models/user');
 const Friend = require('../models/friend');
 
 const friendsControllers = require('../controllers/friends-controllers');
+const userControllers = require('../controllers/users-controllers');
 
 const fileUpload = require('../middleware/file-upload');
 const checkAuth = require('../middleware/check-auth');
@@ -112,5 +113,21 @@ router.get('/', checkAuth, friendsControllers.getFriends);
 router.post('/', checkAuth, friendsControllers.addFriend);
 
 router.delete('/:friendId', checkAuth, friendsControllers.removeFriend);
+
+// router.get('/friends', checkAuth, async (req, res) => {
+//   try {
+//     const userId = req.userId;  // From checkAuth middleware
+    
+//     const user = await User.findById(userId)
+//       .populate('friends', 'fname lname email profileImage');
+    
+//     res.json(user.friends || []);
+//   } catch (error) {
+//     console.error('Error fetching friends:', error);
+//     res.status(500).json({ message: 'Failed to fetch friends' });
+//   }
+// });
+router.get('/friends', checkAuth, userControllers.getAllFriends);
+
 
 module.exports = router;

@@ -646,12 +646,12 @@ const getFriends = async (req, res, next) => {
  */
 const getAllFriends = async (req, res, next) => {
   try {
-    const { userId } = req.params;
+    const { userId } = req.userData.userId;
+    //console.log(req);
     
-    const user = await User.findById(userId)
-      .populate('friends', 'fname lname email profileImage accountStatus')
-      .populate('externalContacts');
-    
+    const user = await User.findById(req.userData.userId)
+       .populate('friends', 'fname lname email profileImage accountStatus')
+       .populate('externalContacts');
     if (!user) {
       return next(new HttpError('User not found', 404));
     }
@@ -660,10 +660,10 @@ const getAllFriends = async (req, res, next) => {
     const userFriends = user.friends
       .filter(f => f.accountStatus === 'active' && !f.isDeleted)
       .map(f => ({
-        id: f._id,
+        _id: f._id,
         name: `${f.fname} ${f.lname}`,
-        firstName: f.fname,
-        lastName: f.lname,
+        fname: f.fname,
+        lname: f.lname,
         email: f.email,
         profileImage: f.profileImage,
         type: 'user',
@@ -676,10 +676,10 @@ const getAllFriends = async (req, res, next) => {
     const contactFriends = user.externalContacts
       .filter(c => !c.linkedUserId) // Only unlinked contacts
       .map(c => ({
-        id: c._id,
+        _id: c._id,
         name: c.displayName,
-        firstName: c.firstName,
-        lastName: c.lastName,
+        fname: c.firstName,
+        lname: c.lastName,
         email: c.email,
         phoneNumber: c.phoneNumber,
         profileImage: null,

@@ -141,17 +141,29 @@ export async function addContact(contactData) {
  */
 export async function getAllFriends() {
   try {
-    const userResponse = await apiClient.get('/users/me');
-    const userId = userResponse.data.user.id || userResponse.data.user._id;
-    
-    const response = await apiClient.get(`/users/${userId}/all-friends`);
-    return response.data.friends || [];
+        
+    const response = await apiClient.get(`/users/all-friends`);
+    const friendsData = response.data?.friends || response.data || [];
+    return friendsData;
   } catch (error) {
     console.error('Get all friends error:', error.message);
     if (error.status === 404) return [];
     throw error;
   }
 }
+
+// export const getAllFriends = async () => {
+//   try {
+//     // ✅ SIMPLE - Just one call
+//     const response = await apiClient.get('/friends');
+//     const friendsData = response.data?.friends || response.data || [];
+//     return friendsData;
+//   } catch (error) {
+//     console.error('Error fetching friends:', error);
+//     throw error;
+//   }
+//};
+
 
 // Other utility functions...
 export async function getFriendById(friendId) {

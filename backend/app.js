@@ -165,7 +165,7 @@ app.use('/api/contacts', contactsRoutes);
 app.use('/api/events', eventInviteRoutes);
 
 // TODO: Add these routes as you create them
-   app.use("/api/events", eventRoutes);         // Investment events (TODO)
+app.use("/api/events", eventRoutes);         // Investment events (TODO)
 // app.use("/api/contributions", contributionRoutes);  // Contributions (TODO)
 // app.use("/api/portfolio", portfolioRoutes);   // User portfolio (TODO)
 

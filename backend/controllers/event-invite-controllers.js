@@ -18,7 +18,7 @@ const { sendInvitationSMS, sendRSVPConfirmationSMS, sendReminderSMS } = require(
  *   ]
  * }
  */
-exports.sendInvitations = async (req, res) => {
+const sendInvitations = async (req, res) => {
   try {
     const { eventId } = req.params;
     const { guests } = req.body; // Array of guest objects
@@ -178,7 +178,7 @@ exports.sendInvitations = async (req, res) => {
  * Get all guests for an event
  * GET /api/events/:eventId/guests
  */
-exports.getGuestList = async (req, res) => {
+const getGuestList = async (req, res) => {
   try {
     const { eventId } = req.params;
     
@@ -241,7 +241,7 @@ exports.getGuestList = async (req, res) => {
  * PATCH /api/events/:eventId/rsvp
  * Body: { email, rsvpStatus, plusOnes?, dietaryRestrictions? }
  */
-exports.updateRSVP = async (req, res) => {
+const updateRSVP = async (req, res) => {
   try {
     const { eventId } = req.params;
     const { email, rsvpStatus, plusOnes, dietaryRestrictions, specialRequests } = req.body;
@@ -344,56 +344,62 @@ exports.updateRSVP = async (req, res) => {
  * DELETE /api/events/:eventId/guests/:guestIdentifier
  * guestIdentifier can be: participantId OR email
  */
-exports.removeGuest = async (req, res) => {
-  try {
-    const { eventId, guestIdentifier } = req.params;
-    
-    const event = await Event.findById(eventId);
-    if (!event) {
-      return res.status(404).json({ message: 'Event not found' });
-    }
-    
-    // Check if user is host
-    if (!event.isHost(req.userData.userId)) {
-      return res.status(403).json({ message: 'Only hosts can remove guests' });
-    }
-    
-    let removed = false;
-    
-    // Try to remove from EventParticipant (if ObjectId)
-    if (guestIdentifier.match(/^[0-9a-fA-F]{24}$/)) {
-      const participant = await EventParticipant.findByIdAndDelete(guestIdentifier);
-      if (participant) {
-        removed = true;
-        console.log(`✅ Removed registered user: ${guestIdentifier}`);
-      }
-    }
-    
-    // Try to remove from Event.guestList (if email)
-    if (!removed && guestIdentifier.includes('@')) {
-      const initialLength = event.guestList.length;
-      event.guestList = event.guestList.filter(g => g.email !== guestIdentifier);
+const removeGuest = async (req, res) => {
+    try {
+      const { eventId, guestId } = req.params;
       
-      if (event.guestList.length < initialLength) {
-        await event.save();
-        removed = true;
-        console.log(`✅ Removed external guest: ${guestIdentifier}`);
+      console.log('Remove guest request:', { eventId, guestId, userId: req.userData.userId });
+      
+      // Find event
+      const event = await Event.findById(eventId);
+      
+      if (!event) {
+        return res.status(404).json({ message: 'Event not found' });
       }
-    }
-    
-    if (removed) {
-      res.status(200).json({
+      
+      // Check if user is event creator
+      if (event.createdBy.toString() !== req.userData.userId) {
+        return res.status(403).json({ message: 'Not authorized to manage this event' });
+      }
+      
+      // Find guest in guestList
+      const guestIndex = event.guestList.findIndex(
+        g => g._id.toString() === guestId
+      );
+      
+      if (guestIndex === -1) {
+        console.log('Guest not found in guestList:', {
+          guestId,
+          availableGuests: event.guestList.map(g => g._id.toString())
+        });
+        return res.status(404).json({ message: 'Guest not found in guest list' });
+      }
+      
+      const removedGuest = event.guestList[guestIndex];
+      
+      // Remove guest from array
+      event.guestList.splice(guestIndex, 1);
+      
+      await event.save();
+      
+      console.log('Guest removed successfully:', removedGuest.name);
+      
+      res.json({ 
         message: 'Guest removed successfully',
+        removedGuest: {
+          name: removedGuest.name,
+          email: removedGuest.email,
+        }
       });
-    } else {
-      res.status(404).json({ message: 'Guest not found' });
+      
+    } catch (error) {
+      console.error('Remove guest error:', error);
+      res.status(500).json({ 
+        message: 'Failed to remove guest',
+        error: error.message 
+      });
     }
-    
-  } catch (error) {
-    console.error('Error removing guest:', error);
-    res.status(500).json({ message: 'Failed to remove guest' });
-  }
-};
+  };
 
 // ========================================
 // RESEND INVITATION
@@ -404,57 +410,127 @@ exports.removeGuest = async (req, res) => {
  * POST /api/events/:eventId/guests/resend
  * Body: { email }
  */
-exports.resendInvitation = async (req, res) => {
-  try {
-    const { eventId } = req.params;
-    const { email } = req.body;
-    
-    const event = await Event.findById(eventId);
-    if (!event) {
-      return res.status(404).json({ message: 'Event not found' });
-    }
-    
-    // Check if user is host
-    if (!event.isHost(req.userData.userId)) {
-      return res.status(403).json({ message: 'Only hosts can resend invitations' });
-    }
-    
-    // Check registered users
-    const user = await User.findOne({ email });
-    if (user) {
-      const participant = await EventParticipant.findOne({
-        event: eventId,
-        user: user._id,
+const resendInvite = async (req, res) => {
+    try {
+      const { eventId } = req.params;
+      const { guestId } = req.body;
+      
+      console.log('Resend invite request:', { eventId, guestId });
+      
+      // Find event
+      const event = await Event.findById(eventId);
+      
+      if (!event) {
+        return res.status(404).json({ message: 'Event not found' });
+      }
+      
+      // Check if user is event creator
+      if (event.createdBy.toString() !== req.userData.userId) {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+      
+      // Find guest in guestList
+      const guest = event.guestList.find(
+        g => g._id.toString() === guestId
+      );
+      
+      if (!guest) {
+        return res.status(404).json({ message: 'Guest not found in guest list' });
+      }
+      
+      // Update invitedAt timestamp
+      guest.invitedAt = new Date();
+      guest.inviteMethod = guest.email ? 'email' : (guest.phone ? 'sms' : 'in_app');
+      
+      await event.save();
+      
+      // TODO: Actually send email/SMS invitation here
+      // const emailService = require('../services/email-service');
+      // await emailService.sendInvitation(guest.email, event);
+      
+      console.log('Invitation resent to:', guest.name);
+      
+      res.json({ 
+        message: 'Invitation sent successfully',
+        guest: {
+          name: guest.name,
+          email: guest.email,
+          invitedAt: guest.invitedAt,
+        }
       });
       
-      if (participant) {
-        // TODO: Send actual email/SMS (Day 5)
-        console.log(`📧 Would resend invitation to ${email} (registered)`);
-        return res.status(200).json({
-          message: 'Invitation resent successfully',
-          type: 'registered',
-        });
-      }
-    }
-    
-    // Check external guests
-    const guest = event.guestList.find(g => g.email === email);
-    if (guest) {
-      // TODO: Send actual email/SMS (Day 5)
-      console.log(`📧 Would resend invitation to ${email} (external)`);
-      return res.status(200).json({
-        message: 'Invitation resent successfully',
-        type: 'external',
+    } catch (error) {
+      console.error('Resend invite error:', error);
+      res.status(500).json({ 
+        message: 'Failed to resend invitation',
+        error: error.message 
       });
     }
-    
-    res.status(404).json({ message: 'Guest not found' });
-    
-  } catch (error) {
-    console.error('Error resending invitation:', error);
-    res.status(500).json({ message: 'Failed to resend invitation' });
-  }
-};
+  };
+
+/**
+ * Send invitations to all pending guests
+ * POST /api/events/:eventId/send-all-invites
+ */
+const sendAllInvites = async (req, res) => {
+    try {
+      const { eventId } = req.params;
+      
+      console.log('Send all invites request:', { eventId });
+      
+      // Find event
+      const event = await Event.findById(eventId);
+      
+      if (!event) {
+        return res.status(404).json({ message: 'Event not found' });
+      }
+      
+      // Check if user is event creator
+      if (event.createdBy.toString() !== req.userData.userId) {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+      
+      // Find all pending guests
+      const pendingGuests = event.guestList.filter(
+        g => g.rsvpStatus === 'pending'
+      );
+      
+      if (pendingGuests.length === 0) {
+        return res.status(400).json({ message: 'No pending guests to invite' });
+      }
+      
+      // Update invitedAt timestamp for all pending guests
+      const now = new Date();
+      pendingGuests.forEach(guest => {
+        guest.invitedAt = now;
+        guest.inviteMethod = guest.email ? 'email' : (guest.phone ? 'sms' : 'in_app');
+      });
+      
+      await event.save();
+      
+      // TODO: Actually send email/SMS invitations here
+      // const emailService = require('../services/email-service');
+      // await emailService.sendBulkInvitations(pendingGuests, event);
+      
+      console.log(`Invitations sent to ${pendingGuests.length} guests`);
+      
+      res.json({ 
+        message: 'Invitations sent successfully',
+        count: pendingGuests.length,
+        guests: pendingGuests.map(g => ({
+          name: g.name,
+          email: g.email,
+        }))
+      });
+      
+    } catch (error) {
+      console.error('Send all invites error:', error);
+      res.status(500).json({ 
+        message: 'Failed to send invitations',
+        error: error.message 
+      });
+    }
+  };
 
 // ========================================
 // SEND REMINDER (Both types)
@@ -464,7 +540,7 @@ exports.resendInvitation = async (req, res) => {
  * Send reminder to all pending guests
  * POST /api/events/:eventId/remind
  */
-exports.sendReminder = async (req, res) => {
+const sendReminder = async (req, res) => {
   try {
     const { eventId } = req.params;
     
@@ -534,7 +610,7 @@ exports.sendReminder = async (req, res) => {
  * POST /api/events/:eventId/guests/import
  * Body: { guests: [{ name, email, phone }] }
  */
-exports.bulkImportGuests = async (req, res) => {
+const bulkImportGuests = async (req, res) => {
   try {
     const { eventId } = req.params;
     const { guests } = req.body;
@@ -617,3 +693,14 @@ exports.bulkImportGuests = async (req, res) => {
     res.status(500).json({ message: 'Failed to import guests' });
   }
 };
+
+module.exports = {
+    sendInvitations,
+    getGuestList,
+    updateRSVP,
+    removeGuest,
+    resendInvite,
+    sendAllInvites,
+    sendReminder,
+    bulkImportGuests,
+  };

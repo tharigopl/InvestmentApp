@@ -9,83 +9,119 @@ import {
   ActivityIndicator,
   TextInput,
   Image,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GlobalStyles } from '../constants/styles';
 import { getAllFriends } from '../util/friend';
+import { showAlert } from '../util/platform-alert';
+
+// Extended color palette to match your app's warm theme (#FF6B6B coral/red primary)
+const AppColors = {
+  // Primary colors (warm coral/red from your App.js theme)
+  primary50: '#FFE5E5',
+  primary100: '#FFCCCC',
+  primary200: '#FF9999',
+  primary500: '#FF6B6B',  // Main primary from your theme
+  primary600: '#FF5252',
+  primary700: '#E53935',
+  
+  // Success/Accent (teal from your theme)
+  success50: '#E0F7F7',
+  success500: '#4ECDC4',  // From your notification color
+  
+  // Warning colors (peachy to match warm theme)
+  warning500: '#FFB74D',
+  warning600: '#FFA726',
+  
+  // Error colors
+  error500: '#E53935',
+  
+  // Gray scale (neutral)
+  gray50: '#FFF9F0',      // Your background color
+  gray100: '#F5F5F5',
+  gray200: '#FFE5B4',     // Your border color
+  gray300: '#E0E0E0',
+  gray400: '#BDBDBD',
+  gray500: '#999999',
+  gray600: '#757575',
+  gray700: '#616161',
+  gray800: '#333333',     // Your text color
+  gray900: '#212121',
+};
 
 /**
  * FriendSelector Component
  * Works with both registered users and external contacts
  */
-const FriendSelector = ({ selectedFriends = [], onFriendsChange, maxSelections = 50 }) => {
-  const [friends, setFriends] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+const FriendSelector = ({ 
+  friends = [], 
+  selectedFriends = [], 
+  onSelectionChange  // ✅ CHANGE from onFriendsChange
+}) => {
+  //const [friends, setFriends] = useState([]);
+  //const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    loadFriends();
-  }, []);
+  // useEffect(() => {
+  //   loadFriends();
+  // }, []);
 
   // Memoize filtered friends
   const filteredFriends = useMemo(() => {
     if (!searchQuery.trim()) {
       return friends;
     }
-
+  
     const query = searchQuery.toLowerCase();
     return friends.filter(friend => {
-      const name = (friend.name || '').toLowerCase();
+      // ✅ Support both name formats
+      const fullName = friend.name || `${friend.fname || ''} ${friend.lname || ''}`.trim();
+      const name = fullName.toLowerCase();
       const email = (friend.email || '').toLowerCase();
       return name.includes(query) || email.includes(query);
     });
   }, [friends, searchQuery]);
 
-  const loadFriends = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  // const loadFriends = async () => {
+  //   try {
+  //     setIsLoading(true);
+  //     setError(null);
+  //     console.log("FriendSelector");
+  //     const allFriends = await getAllFriends();
+  //     console.log('Loaded friends:', allFriends);
       
-      const allFriends = await getAllFriends();
-      console.log('Loaded friends:', allFriends);
-      
-      setFriends(allFriends);
-    } catch (error) {
-      console.error('Error loading friends:', error);
-      setError(error.message || 'Failed to load friends');
-      setFriends([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  //     setFriends(allFriends);
+  //   } catch (error) {
+  //     console.error('Error loading friends:', error);
+  //     setError(error.message || 'Failed to load friends');
+  //     setFriends([]);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   const handleToggleFriend = (friend) => {
-    const isSelected = selectedFriends.find(f => f.id === friend.id);
-
+    const friendId = friend._id || friend.id;
+    const isSelected = selectedFriends.some(f => (f._id || f.id) === friendId);
+    
     if (isSelected) {
-      onFriendsChange(selectedFriends.filter(f => f.id !== friend.id));
+      onSelectionChange(selectedFriends.filter(f => (f._id || f.id) !== friendId));
     } else {
-      if (selectedFriends.length >= maxSelections) {
-        Alert.alert('Maximum Reached', `You can only invite up to ${maxSelections} friends`);
-        return;
-      }
-      onFriendsChange([...selectedFriends, friend]);
+      onSelectionChange([...selectedFriends, friend]);
     }
   };
 
   const handleSelectAll = () => {
     if (selectedFriends.length === filteredFriends.length) {
-      onFriendsChange([]);
+      onSelectionChange([]);  // ✅ CHANGE
     } else {
-      const toSelect = filteredFriends.slice(0, maxSelections);
-      onFriendsChange(toSelect);
+      onSelectionChange(filteredFriends);  // ✅ CHANGE
     }
   };
 
   const renderFriendItem = ({ item }) => {
-    const isSelected = selectedFriends.find(f => f.id === item.id);
+    const isSelected = selectedFriends.find(f => (f._id || f.id) === (item._id || item.id));
     const isContact = item.type === 'contact';
 
     return (
@@ -103,7 +139,7 @@ const FriendSelector = ({ selectedFriends = [], onFriendsChange, maxSelections =
           ) : (
             <View style={[styles.avatar, styles.avatarPlaceholder]}>
               <Text style={styles.avatarText}>
-                {(item.name || item.email || '?')[0].toUpperCase()}
+                {(item.fname || item.name || item.email || '?')[0].toUpperCase()}
               </Text>
             </View>
           )}
@@ -125,7 +161,9 @@ const FriendSelector = ({ selectedFriends = [], onFriendsChange, maxSelections =
 
         {/* Friend Info */}
         <View style={styles.friendInfo}>
-          <Text style={styles.friendName}>{item.name || 'Unknown'}</Text>
+        <Text style={styles.friendName}>
+          {item.name || `${item.fname || ''} ${item.lname || ''}`.trim() || 'Unknown'}
+        </Text>
           {item.email && (
             <Text style={styles.friendEmail} numberOfLines={1}>
               {item.email}
@@ -136,7 +174,7 @@ const FriendSelector = ({ selectedFriends = [], onFriendsChange, maxSelections =
               <Ionicons 
                 name={item.invitedToJoin ? "mail" : "mail-outline"} 
                 size={12} 
-                color={item.invitedToJoin ? GlobalStyles.colors.success500 : GlobalStyles.colors.warning600} 
+                color={item.invitedToJoin ? AppColors.success500 : AppColors.warning600} 
               />
               <Text style={[
                 styles.contactLabelText,
@@ -156,21 +194,22 @@ const FriendSelector = ({ selectedFriends = [], onFriendsChange, maxSelections =
     );
   };
 
-  const keyExtractor = (item) => item.id;
+  const keyExtractor = (item) => item._id || item.id;
 
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={GlobalStyles.colors.primary500} />
-        <Text style={styles.loadingText}>Loading friends...</Text>
-      </View>
-    );
-  }
+
+  // if (isLoading) {
+  //   return (
+  //     <View style={styles.loadingContainer}>
+  //       <ActivityIndicator size="large" color={AppColors.primary500} />
+  //       <Text style={styles.loadingText}>Loading friends...</Text>
+  //     </View>
+  //   );
+  // }
 
   if (error) {
     return (
       <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle" size={60} color={GlobalStyles.colors.error500} />
+        <Ionicons name="alert-circle" size={60} color={AppColors.error500} />
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={loadFriends}>
           <Text style={styles.retryButtonText}>Retry</Text>
@@ -182,12 +221,12 @@ const FriendSelector = ({ selectedFriends = [], onFriendsChange, maxSelections =
   return (
     <View style={styles.container}>
       <Text style={styles.label}>
-        Invite Friends ({selectedFriends.length}/{maxSelections})
+        Invite Friends ({selectedFriends.length} selected)
       </Text>
 
       {/* Search bar */}
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color={GlobalStyles.colors.gray400} />
+        <Ionicons name="search" size={20} color={AppColors.gray400} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search friends by name or email"
@@ -199,7 +238,7 @@ const FriendSelector = ({ selectedFriends = [], onFriendsChange, maxSelections =
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Ionicons name="close-circle" size={20} color={GlobalStyles.colors.gray400} />
+            <Ionicons name="close-circle" size={20} color={AppColors.gray400} />
           </TouchableOpacity>
         )}
       </View>
@@ -221,7 +260,7 @@ const FriendSelector = ({ selectedFriends = [], onFriendsChange, maxSelections =
       {/* Friends List */}
       {filteredFriends.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="people-outline" size={60} color={GlobalStyles.colors.gray300} />
+          <Ionicons name="people-outline" size={60} color={AppColors.gray300} />
           <Text style={styles.emptyText}>
             {searchQuery ? 'No friends found' : 'No friends yet'}
           </Text>
@@ -257,7 +296,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: GlobalStyles.colors.gray700,
+    color: AppColors.gray700,
     marginBottom: 12,
     paddingHorizontal: 16,
   },
@@ -270,7 +309,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: GlobalStyles.colors.gray500,
+    color: AppColors.gray500,
   },
   errorContainer: {
     flex: 1,
@@ -281,13 +320,13 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: GlobalStyles.colors.error500,
+    color: AppColors.error500,
     textAlign: 'center',
     marginTop: 16,
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: GlobalStyles.colors.primary500,
+    backgroundColor: AppColors.primary500,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -303,7 +342,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: GlobalStyles.colors.gray100,
+    backgroundColor: AppColors.gray100,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -313,7 +352,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: GlobalStyles.colors.gray800,
+    color: AppColors.gray800,
     marginLeft: 8,
     outlineStyle: 'none',
   },
@@ -326,12 +365,12 @@ const styles = StyleSheet.create({
   },
   selectionText: {
     fontSize: 14,
-    color: GlobalStyles.colors.gray600,
+    color: AppColors.gray600,
   },
   selectAllButton: {
     fontSize: 14,
     fontWeight: '600',
-    color: GlobalStyles.colors.primary600,
+    color: AppColors.primary600,
   },
   friendItem: {
     flexDirection: 'row',
@@ -340,10 +379,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: GlobalStyles.colors.gray200,
+    borderBottomColor: AppColors.gray200,
   },
   friendItemSelected: {
-    backgroundColor: GlobalStyles.colors.primary50,
+    backgroundColor: AppColors.primary50,
   },
   avatarContainer: {
     position: 'relative',
@@ -355,14 +394,14 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   avatarPlaceholder: {
-    backgroundColor: GlobalStyles.colors.primary200,
+    backgroundColor: AppColors.primary200,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: GlobalStyles.colors.primary700,
+    color: AppColors.primary700,
   },
   contactBadge: {
     position: 'absolute',
@@ -371,7 +410,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: GlobalStyles.colors.warning500,
+    backgroundColor: AppColors.warning500,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -384,7 +423,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: GlobalStyles.colors.success500,
+    backgroundColor: AppColors.success500,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -397,12 +436,12 @@ const styles = StyleSheet.create({
   friendName: {
     fontSize: 16,
     fontWeight: '600',
-    color: GlobalStyles.colors.gray800,
+    color: AppColors.gray800,
     marginBottom: 2,
   },
   friendEmail: {
     fontSize: 14,
-    color: GlobalStyles.colors.gray500,
+    color: AppColors.gray500,
   },
   contactLabel: {
     flexDirection: 'row',
@@ -412,24 +451,24 @@ const styles = StyleSheet.create({
   },
   contactLabelText: {
     fontSize: 12,
-    color: GlobalStyles.colors.warning600,
+    color: AppColors.warning600,
     fontWeight: '500',
   },
   contactLabelInvited: {
-    color: GlobalStyles.colors.success500,
+    color: AppColors.success500,
   },
   checkbox: {
     width: 28,
     height: 28,
     borderRadius: 14,
     borderWidth: 2,
-    borderColor: GlobalStyles.colors.gray300,
+    borderColor: AppColors.gray300,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxSelected: {
-    backgroundColor: GlobalStyles.colors.primary500,
-    borderColor: GlobalStyles.colors.primary500,
+    backgroundColor: AppColors.primary500,
+    borderColor: AppColors.primary500,
   },
   emptyContainer: {
     flex: 1,
@@ -441,14 +480,14 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: GlobalStyles.colors.gray700,
+    color: AppColors.gray700,
     marginTop: 16,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    color: GlobalStyles.colors.gray500,
+    color: AppColors.gray500,
     textAlign: 'center',
   },
 });

@@ -402,6 +402,7 @@ const updateEvent = async (req, res, next) => {
 const deleteEvent = async (req, res, next) => {
   const startTime = Date.now();
   const { eventId } = req.params;
+  logger.info('deleteEvent -', { eventId, requestId: req.id }, req.userData);
   const userId = req.userData.userId;
 
   logger.info('deleteEvent - START', { eventId, userId, requestId: req.id });
@@ -872,7 +873,7 @@ const completeEvent = async (req, res, next) => {
   }
 };
 
-getFundsSummary = async (req, res, next) => {
+const getFundsSummary = async (req, res, next) => {
   const { eventId } = req.params;
   const userId = req.userData.userId;
 
@@ -906,7 +907,7 @@ getFundsSummary = async (req, res, next) => {
   }
 };
 
-initiateWithdrawal = async (req, res, next) => {
+const initiateWithdrawal = async (req, res, next) => {
   const { eventId } = req.params;
   const userId = req.userData.userId;
 
@@ -965,7 +966,7 @@ initiateWithdrawal = async (req, res, next) => {
   }
 };
 
-markStocksPurchased = async (req, res, next) => {
+const markStocksPurchased = async (req, res, next) => {
   const { eventId } = req.params;
   const userId = req.userData.userId;
   const { purchaseDetails } = req.body; // Optional: proof of purchase
@@ -1068,6 +1069,7 @@ const updateEventStatus = async (req, res) => {
     res.status(500).json({ message: 'Failed to update status' });
   }
 };
+
 
 // const getUserEvents = async (req, res, next) => {
 //   try {
